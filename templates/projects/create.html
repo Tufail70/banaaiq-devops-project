@@ -1,0 +1,152 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}{{ 'Edit Project' if is_edit else 'Create Project' }} | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+    <div class="project-page-head">
+        <div>
+            <h3 class="mb-1">{{ 'Edit Project Workspace' if is_edit else 'Create Project Workspace' }}</h3>
+            <p class="text-muted mb-0">Project DNA becomes the shared identity for reports, quantities, tasks, inventory, and packages.</p>
+        </div>
+        <a class="btn btn-outline-gold" href="{{ url_for('project_workspace', id=project.id) if is_edit else url_for('projects_list') }}">
+            <i class="fa fa-arrow-left me-2"></i>Back
+        </a>
+    </div>
+
+    <form class="content-card project-form-card" method="post" action="{{ form_action }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="project-form-section">
+                    <div class="mb-3">
+                        <label class="form-label">Project Name <span class="project-label-ar">/ اسم المشروع</span></label>
+                        <input class="form-control" name="name" required maxlength="200" value="{{ project.name if project else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference Number <span class="project-label-ar">/ الرقم المرجعي</span></label>
+                        <input class="form-control" name="reference_number" maxlength="100" value="{{ project.reference_number if project else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Project Type <span class="project-label-ar">/ نوع المشروع</span></label>
+                        <select class="form-select" name="project_type">
+                            <option value="">Select type</option>
+                            {% for value, label in project_type_options %}
+                            <option value="{{ value }}" {{ 'selected' if project and project.project_type == value else '' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Location City <span class="project-label-ar">/ المدينة</span></label>
+                            <input class="form-control" name="location_city" maxlength="100" value="{{ project.location_city if project else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Location Zone <span class="project-label-ar">/ المنطقة</span></label>
+                            <input class="form-control" name="location_zone" maxlength="100" value="{{ project.location_zone if project else '' }}">
+                        </div>
+                    </div>
+                    {% if is_edit %}
+                    <div class="mt-3">
+                        <label class="form-label">Status <span class="project-label-ar">/ الحالة</span></label>
+                        <select class="form-select" name="status">
+                            {% for value, label in project_status_options %}
+                            <option value="{{ value }}" {{ 'selected' if project and project.status == value else '' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="project-form-section">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Client Name <span class="project-label-ar">/ اسم العميل</span></label>
+                            <input class="form-control" name="client_name" maxlength="200" value="{{ project.client_name if project else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Client Contact <span class="project-label-ar">/ بيانات التواصل</span></label>
+                            <input class="form-control" name="client_contact" maxlength="200" value="{{ project.client_contact if project else '' }}">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Contract Value (SAR) <span class="project-label-ar">/ قيمة العقد</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#65020;</span>
+                            <input class="form-control" name="contract_value" inputmode="decimal" value="{{ project.contract_value if project and project.contract_value is not none else '' }}">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date <span class="project-label-ar">/ تاريخ البداية</span></label>
+                            <input class="form-control" type="date" name="start_date" value="{{ project.start_date.isoformat() if project and project.start_date else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Planned Completion <span class="project-label-ar">/ الإنجاز المخطط</span></label>
+                            <input class="form-control" type="date" name="planned_completion" value="{{ project.planned_completion.isoformat() if project and project.planned_completion else '' }}">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label">Lead Engineer <span class="project-label-ar">/ المهندس المسؤول</span></label>
+                            <input class="form-control" name="lead_engineer" maxlength="200" value="{{ project.lead_engineer if project else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Project Manager <span class="project-label-ar">/ مدير المشروع</span></label>
+                            <input class="form-control" name="project_manager" maxlength="200" value="{{ project.project_manager if project else '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if not is_edit %}
+        <div class="project-milestone-builder mt-4">
+            <div>
+                <h6 class="mb-1">Optional Custom Milestones</h6>
+                <p class="text-muted mb-3">5 default milestones will be created automatically.</p>
+            </div>
+            <div id="custom-milestones" class="d-grid gap-2">
+                <div class="row g-2">
+                    <div class="col-md-7">
+                        <input class="form-control" name="custom_milestone_title" placeholder="Milestone title">
+                    </div>
+                    <div class="col-md-5">
+                        <input class="form-control" type="date" name="custom_milestone_date">
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline-gold mt-3" type="button" onclick="addCustomMilestoneRow()">
+                <i class="fa fa-plus me-2"></i>Add Milestone Row
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="project-form-actions">
+            <button class="btn btn-gold btn-lg" type="submit">
+                {{ 'Save Project Workspace' if is_edit else 'Create Project Workspace' }} <i class="fa fa-arrow-right ms-2"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
+<script>
+function addCustomMilestoneRow() {
+  const shell = document.getElementById('custom-milestones')
+  if (!shell) return
+  const row = document.createElement('div')
+  row.className = 'row g-2'
+  row.innerHTML = `
+    <div class="col-md-7">
+      <input class="form-control" name="custom_milestone_title" placeholder="Milestone title">
+    </div>
+    <div class="col-md-5">
+      <input class="form-control" type="date" name="custom_milestone_date">
+    </div>`
+  shell.appendChild(row)
+}
+</script>
+{% endblock %}

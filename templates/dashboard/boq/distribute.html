@@ -1,0 +1,106 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ tr('Distribute BOQ', 'توزيع جدول الكميات') }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex align-items-center mb-4 gap-3">
+    <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+        <i class="fas fa-share-nodes me-2" style="color:var(--color-gold)"></i>
+        {{ tr('Distribute BOQ to Engineers', 'توزيع جدول الكميات على المهندسين') }}
+      </h4>
+      <small class="text-muted">{{ boq.title }}</small>
+    </div>
+  </div>
+
+  {% if not engineers %}
+  <div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    {{ tr('No site engineers are assigned to this project yet. Go to the Project page to assign engineers first.', 'لا يوجد مهندسو موقع مُعينون لهذا المشروع بعد. انتقل إلى صفحة المشروع لتعيين المهندسين أولاً.') }}
+    {% if boq.project_id %}
+    <br><a href="{{ url_for('project_oversight', project_id=boq.project_id) }}" class="btn btn-sm btn-warning mt-2">{{ tr('Go to Project','انتقل للمشروع') }}</a>
+    {% endif %}
+  </div>
+  {% else %}
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <p class="text-muted mb-4">
+        {{ tr('Assign each trade section to a site engineer. Sections without an assigned engineer will be skipped.', 'عيّن كل قسم حرفي لمهندس موقع. الأقسام بدون مهندس مُعين سيتم تجاهلها.') }}
+      </p>
+
+      <form method="POST" action="{{ url_for('boq_distribute', boq_id=boq.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if sections %}
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead style="background:var(--color-navy);color:#fff">
+              <tr>
+                <th>{{ tr('Trade Section','القسم الحرفي') }}</th>
+                <th>{{ tr('Arabic Name','الاسم بالعربية') }}</th>
+                <th>{{ tr('Items Count','عدد البنود') }}</th>
+                <th>{{ tr('Section Total SAR','إجمالي القسم ﷼') }}</th>
+                <th>{{ tr('Assign To Engineer','تعيين لمهندس') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sec in sections %}
+              {% if sec is mapping %}
+              {% set sec_total = namespace(val=0) %}
+              {% for item in sec.get('items', []) if item is mapping %}
+                {% set sec_total.val = sec_total.val + item.get('total_sar', 0)|float %}
+              {% endfor %}
+              {% set field_name = 'engineer_' + (sec.get('trade','general')|lower|replace(' ','_')) %}
+              <tr>
+                <td>
+                  <span class="badge" style="background:var(--color-gold);color:#fff">{{ sec.get('trade','—') }}</span>
+                </td>
+                <td dir="rtl" style="font-family:'Cairo',sans-serif">{{ sec.get('trade_ar','') }}</td>
+                <td><span class="badge bg-secondary">{{ sec.get('items',[])|length }}</span></td>
+                <td class="fw-semibold">SAR {{ "{:,.0f}".format(sec_total.val) }}</td>
+                <td>
+                  <select name="{{ field_name }}" class="form-select form-select-sm" style="min-width:180px">
+                    <option value="">{{ tr('-- Skip this section --','-- تجاهل هذا القسم --') }}</option>
+                    {% for eng in engineers %}
+                    <option value="{{ eng.id }}">{{ eng.full_name }} ({{ eng.job_title or 'Site Engineer' }})</option>
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">{{ tr('No sections found in this BOQ.','لا توجد أقسام في هذا الجدول.') }}</div>
+        {% endif %}
+
+        <div class="d-flex gap-3 mt-4">
+          <button type="submit" class="btn btn-gold fw-bold px-4">
+            <i class="fas fa-share-nodes me-2"></i>{{ tr('Distribute BOQ','توزيع جدول الكميات') }}
+          </button>
+          <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-outline-secondary">{{ tr('Cancel','إلغاء') }}</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="border-left:4px solid var(--color-gold) !important">
+    <div class="card-body p-4">
+      <h6 class="fw-bold mb-2" style="color:var(--color-navy)"><i class="fas fa-info-circle me-2" style="color:var(--color-gold)"></i>{{ tr('Available Engineers','المهندسون المتاحون') }}</h6>
+      <div class="d-flex flex-wrap gap-2">
+        {% for eng in engineers %}
+        <div class="border rounded p-2 small">
+          <i class="fas fa-hard-hat me-1" style="color:var(--color-gold)"></i>
+          <strong>{{ eng.full_name }}</strong>
+          <span class="text-muted ms-1">{{ eng.job_title or 'Site Engineer' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

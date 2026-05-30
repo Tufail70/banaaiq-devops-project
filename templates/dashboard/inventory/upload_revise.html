@@ -1,0 +1,153 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Upload & Revise Inventory | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+        <i class="fas fa-file-arrow-up me-2" style="color:#F59E0B;"></i>
+        Upload & Revise Inventory / رفع وتعديل المخزون
+      </h4>
+      <small class="text-muted">
+        Upload an existing inventory file. AI structures it as v1, then applies your changes as v2.
+      </small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card border-0 shadow-sm" style="max-width:760px">
+    <div class="card-body p-4">
+      <form method="POST" action="{{ url_for('inventory_upload_revise') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Project / المشروع <span class="text-danger">*</span></label>
+            <select name="project_id" class="form-select" required>
+              <option value="">— Select project —</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Batch Title / عنوان الدفعة <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" maxlength="200"
+                   placeholder="e.g., Site Materials Phase 2" required>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold">
+              Inventory File / ملف المخزون
+              <span class="text-danger">*</span>
+              <small class="text-muted fw-normal">(.xlsx, .xls, .pdf — max 10 MB)</small>
+            </label>
+            <input type="file" name="inventory_file" class="form-control" accept=".xlsx,.xls,.pdf" required>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold">
+              What changes do you want? / ما التعديلات المطلوبة؟
+              <small class="text-muted fw-normal">(optional)</small>
+            </label>
+            <div class="position-relative">
+              <textarea name="revision_description" id="revision_description" class="form-control"
+                        rows="4" maxlength="3000"
+                        placeholder="e.g., Increase cement stock by 30%, add waterproofing materials category, remove old paint items..."></textarea>
+              <button type="button" class="btn btn-sm btn-outline-secondary position-absolute"
+                      style="bottom:8px;right:8px;" onclick="startVoice(this)"
+                      title="Voice input / الإدخال الصوتي">
+                <i class="fas fa-microphone" id="mic-icon"></i>
+              </button>
+            </div>
+            <small class="text-muted" id="char-count">0 / 3000</small>
+          </div>
+
+          <div class="col-12">
+            <div class="alert alert-info d-flex gap-2 mb-0 py-2">
+              <i class="fas fa-info-circle mt-1 flex-shrink-0"></i>
+              <div class="small">
+                <strong>How it works:</strong>
+                <ol class="mb-0 mt-1 ps-3">
+                  <li>AI structures the uploaded file into a clean inventory → saved as <strong>Batch v1</strong></li>
+                  <li>If a revision description is provided, AI applies changes → saved as <strong>Batch v2</strong></li>
+                  <li>v2 batch shows a "Revised from v1" link in the batch view.</li>
+                  <li>If revision AI fails, v1 is still saved and you'll be notified.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-gold fw-semibold">
+              <i class="fas fa-rocket me-1"></i> Upload & Revise / رفع وتعديل
+            </button>
+            <a href="{{ url_for('inventory_index') }}" class="btn btn-outline-secondary">Cancel / إلغاء</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+</style>
+
+<script>
+const descEl = document.getElementById('revision_description');
+descEl.addEventListener('input', () => {
+  document.getElementById('char-count').textContent = `${descEl.value.length} / 3000`;
+});
+
+let mediaRecorder = null, audioChunks = [], isRecording = false;
+
+async function startVoice(btn) {
+  if (isRecording) {
+    mediaRecorder && mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      document.getElementById('mic-icon').className = 'fas fa-microphone';
+      btn.classList.remove('btn-danger');
+      btn.classList.add('btn-outline-secondary');
+      isRecording = false;
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const fd = new FormData();
+      fd.append('audio', blob, 'voice.webm');
+      try {
+        const res = await fetch('{{ url_for("inventory_transcribe") }}', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) descEl.value += (descEl.value ? ' ' : '') + data.text;
+      } catch(err) { console.error(err); }
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById('mic-icon').className = 'fas fa-microphone-slash';
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-danger');
+  } catch(e) {
+    alert('Microphone access denied.');
+  }
+}
+</script>
+{% endblock %}

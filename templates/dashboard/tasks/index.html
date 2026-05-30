@@ -1,0 +1,270 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% from "_macros/bilingual.html" import page_title %}
+{% block dashboard_content %}
+<div class="container-fluid px-4">
+
+    {# ── Page header ── #}
+    {% call page_title('Task Management', 'إدارة المهام',
+        sub='Track site tasks across projects — Kanban or list view.') %}
+      {% if role == 'project_manager' %}
+      <a href="{{ url_for('task_new') }}" class="bq-btn bq-btn--primary">
+        <i class="fa fa-plus" aria-hidden="true"></i> {{ tr('New Task', 'مهمة جديدة') }}
+      </a>
+      {% endif %}
+    {% endcall %}
+
+    {# ── Flash messages ── #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-3" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    {# ── Filter bar ── #}
+    <form class="bq-task-filter mb-4" method="GET" action="{{ url_for('dashboard_tasks') }}"
+          role="search" aria-label="{{ tr('Filter tasks','تصفية المهام') }}">
+        <label class="visually-hidden" for="task-project-filter">{{ tr('Project','المشروع') }}</label>
+        <select name="project_id" id="task-project-filter" class="bq-input bq-task-filter__select" onchange="this.form.submit()">
+            <option value="">{{ tr('All Projects', 'All Projects') }}</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}" {{ 'selected' if filter_project_id == p.id else '' }}>{{ p.name }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="visually-hidden" for="task-status-filter">{{ tr('Status','الحالة') }}</label>
+        <select name="status" id="task-status-filter" class="bq-input bq-task-filter__select" onchange="this.form.submit()">
+            <option value="">{{ tr('All Status', 'All Status') }}</option>
+            {% for key, label in task_status_labels.items() %}
+            <option value="{{ key }}" {{ 'selected' if filter_status == key else '' }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="visually-hidden" for="task-priority-filter">{{ tr('Priority','الأولوية') }}</label>
+        <select name="priority" id="task-priority-filter" class="bq-input bq-task-filter__select" onchange="this.form.submit()">
+            <option value="">{{ tr('All Priority', 'All Priority') }}</option>
+            <option value="urgent"  {{ 'selected' if filter_priority == 'urgent'  else '' }}>{{ tr('Urgent', 'عاجل') }}</option>
+            <option value="high"    {{ 'selected' if filter_priority == 'high'    else '' }}>{{ tr('High', 'عالي') }}</option>
+            <option value="normal"  {{ 'selected' if filter_priority == 'normal'  else '' }}>{{ tr('Normal', 'عادي') }}</option>
+            <option value="low"     {{ 'selected' if filter_priority == 'low'     else '' }}>{{ tr('Low', 'منخفض') }}</option>
+        </select>
+
+        <label class="visually-hidden" for="task-search">{{ tr('Search','بحث') }}</label>
+        <input type="text" name="q" id="task-search" value="{{ filter_search }}"
+               placeholder="{{ tr('Search tasks…', 'بحث…') }}" class="bq-input bq-task-filter__search">
+
+        <button type="submit" class="bq-btn bq-btn--secondary bq-btn--sm">
+            <i class="fa fa-search" aria-hidden="true"></i>
+        </button>
+        {% if filter_project_id or filter_status or filter_priority or filter_search %}
+        <a href="{{ url_for('dashboard_tasks') }}" class="bq-btn bq-btn--ghost bq-btn--sm" style="color:var(--bq-danger);" title="{{ tr('Clear filters','مسح الفلاتر') }}">
+            <i class="fa fa-times" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+    </form>
+
+    {# ── View toggle ── #}
+    <div class="d-flex align-items-center mb-4" style="gap:var(--bq-s-3);">
+        <div class="bq-view-toggle" role="group" aria-label="{{ tr('View mode','طريقة العرض') }}">
+            <button class="bq-view-toggle__btn bq-view-toggle__btn--active" id="btn-kanban"
+                    onclick="switchView('kanban')" aria-pressed="true">
+                <i class="fa fa-columns" aria-hidden="true"></i> {{ tr('Kanban', 'كانبان') }}
+            </button>
+            <button class="bq-view-toggle__btn" id="btn-list"
+                    onclick="switchView('list')" aria-pressed="false">
+                <i class="fa fa-list" aria-hidden="true"></i> {{ tr('List', 'قائمة') }}
+            </button>
+        </div>
+        <span style="margin-inline-start:auto;font-family:var(--bq-mono);font-size:var(--bq-fs-xs);color:var(--bq-text-muted);">
+            <span class="bq-num">{{ tasks|length }}</span> {{ tr('tasks', 'مهمة') }}
+        </span>
+    </div>
+
+    {# ── Kanban view ── #}
+    <div id="view-kanban">
+        {% if not tasks %}
+        <div class="bq-empty">
+            <div class="bq-empty__icon"><i class="fa fa-list-check" aria-hidden="true"></i></div>
+            <h2 class="bq-empty__title">{{ tr('No tasks yet', 'لا توجد مهام بعد') }}</h2>
+            <p class="bq-empty__body">
+                {% if role == 'project_manager' %}
+                {{ tr('Create your first task to start tracking site work across projects.', 'أنشئ مهمتك الأولى لبدء متابعة العمل في المواقع.') }}
+                {% else %}
+                {{ tr('Tasks assigned to you will appear here.', 'ستظهر هنا المهام المسندة إليك.') }}
+                {% endif %}
+            </p>
+            {% if role == 'project_manager' %}
+            <div class="bq-empty__cta">
+                <a href="{{ url_for('task_new') }}" class="bq-btn bq-btn--primary">
+                    <i class="fa fa-plus" aria-hidden="true"></i> {{ tr('New Task', 'مهمة جديدة') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        {% set status_meta = {
+            'not_started': {'en': 'Not Started', 'ar': 'لم يبدأ', 'mod': 'not-started'},
+            'in_progress':  {'en': 'In Progress', 'ar': 'جاري',   'mod': 'in-progress'},
+            'review':       {'en': 'Review',      'ar': 'مراجعة',  'mod': 'review'},
+            'done':         {'en': 'Done',        'ar': 'مكتمل',   'mod': 'done'},
+        } %}
+        <div class="row g-3">
+            {% for status_key in task_status_labels %}
+            {% set meta = status_meta[status_key] %}
+            {% set col_tasks = kanban[status_key] %}
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="bq-kanban-col bq-kanban-col--{{ meta.mod }}">
+                    {# Column header #}
+                    <div class="bq-kanban-col__head">
+                        <span>{{ meta.en }}<span class="bq-bil-sep" aria-hidden="true"></span>{{ meta.ar }}</span>
+                        <span class="bq-kanban-col__count ms-auto">{{ col_tasks|length }}</span>
+                    </div>
+                    {# Task cards #}
+                    {% for task in col_tasks %}
+                    <div class="bq-card bq-card--inset task-card mb-2" style="position:relative;">
+                        <a href="{{ url_for('task_detail', task_id=task.id) }}"
+                           class="stretched-link text-decoration-none"
+                           aria-label="{{ task.name }}"></a>
+                        <div style="font-weight:600;font-size:var(--bq-fs-sm);line-height:1.35;margin-bottom:var(--bq-s-2);color:var(--bq-text);">
+                            {{ task.name }}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:var(--bq-s-2);flex-wrap:wrap;margin-bottom:var(--bq-s-2);">
+                            {% if task.priority == 'urgent' %}
+                            <span class="bq-pill bq-pill--danger" style="font-size:10px;">{{ tr('Urgent', 'عاجل') }}</span>
+                            {% elif task.priority == 'high' %}
+                            <span class="bq-pill bq-pill--warning" style="font-size:10px;">{{ tr('High', 'عالي') }}</span>
+                            {% endif %}
+                            {% if task.due_date %}
+                            <span class="bq-pill {{ 'bq-pill--danger' if task.is_overdue else 'bq-pill--neutral' }}"
+                                  style="font-family:var(--bq-mono);font-size:10px;">
+                                <i class="fa fa-clock me-1" aria-hidden="true"></i>{{ task.due_date.strftime('%d %b') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;font-size:var(--bq-fs-xs);color:var(--bq-text-muted);">
+                            <span><i class="fa fa-folder fa-fw me-1" aria-hidden="true"></i>{{ task.project_rel.name if task.project_rel else '—' }}</span>
+                            {% if task.assigned_to %}
+                            <span><i class="fa fa-user fa-fw me-1" aria-hidden="true"></i>{{ task.assigned_to.full_name.split()[0] }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p style="text-align:center;color:var(--bq-text-muted);font-size:var(--bq-fs-xs);padding:var(--bq-s-5) 0;margin:0;">
+                        {{ tr('No tasks', 'لا توجد مهام') }}
+                    </p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── List view ── #}
+    <div id="view-list" style="display:none;">
+        {% if tasks %}
+        <div class="bq-card bq-card--bare">
+            <div class="table-responsive">
+                <table class="bq-table">
+                    <thead>
+                        <tr>
+                            <th>{{ tr('Task', 'المهمة') }}</th>
+                            <th>{{ tr('Project', 'المشروع') }}</th>
+                            <th>{{ tr('Assigned To', 'المسند إليه') }}</th>
+                            <th>{{ tr('Status', 'الحالة') }}</th>
+                            <th>{{ tr('Priority', 'الأولوية') }}</th>
+                            <th>{{ tr('Due', 'الاستحقاق') }}</th>
+                            <th style="width:40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr style="cursor:pointer;"
+                            onclick="window.location='{{ url_for('task_detail', task_id=task.id) }}'">
+                            <td style="max-width:220px;">
+                                <a href="{{ url_for('task_detail', task_id=task.id) }}"
+                                   class="text-decoration-none"
+                                   style="font-weight:600;color:var(--bq-text);">{{ task.name }}</a>
+                                {% if task.description %}
+                                <div style="font-size:var(--bq-fs-xs);color:var(--bq-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">
+                                    {{ task.description[:80] }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td style="color:var(--bq-text-muted);">{{ task.project_rel.name if task.project_rel else '—' }}</td>
+                            <td>{{ task.assigned_to.full_name if task.assigned_to else '—' }}</td>
+                            <td>
+                                {% if task.status == 'done' %}
+                                <span class="bq-pill bq-pill--success">{{ task_status_labels.get(task.status, task.status) }}</span>
+                                {% elif task.status == 'in_progress' %}
+                                <span class="bq-pill bq-pill--warning">{{ task_status_labels.get(task.status, task.status) }}</span>
+                                {% elif task.status == 'review' %}
+                                <span class="bq-pill" style="background:rgba(29,78,137,0.12);color:var(--bq-blue);">{{ task_status_labels.get(task.status, task.status) }}</span>
+                                {% else %}
+                                <span class="bq-pill bq-pill--neutral">{{ task_status_labels.get(task.status, task.status) }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if task.priority == 'urgent' %}
+                                <span class="bq-pill bq-pill--danger">{{ tr('Urgent', 'عاجل') }}</span>
+                                {% elif task.priority == 'high' %}
+                                <span class="bq-pill bq-pill--warning">{{ tr('High', 'عالي') }}</span>
+                                {% elif task.priority == 'low' %}
+                                <span class="bq-pill bq-pill--neutral">{{ tr('Low', 'منخفض') }}</span>
+                                {% else %}
+                                <span style="color:var(--bq-text-muted);font-size:var(--bq-fs-xs);">{{ tr('Normal', 'عادي') }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-family:var(--bq-mono);font-size:var(--bq-fs-xs);{{ 'color:var(--bq-danger);font-weight:600;' if task.is_overdue else 'color:var(--bq-text-muted);' }}">
+                                {{ task.due_date.strftime('%d %b %Y') if task.due_date else '—' }}
+                            </td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="bq-overflow-btn" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                        aria-label="{{ tr('Actions','إجراءات') }} {{ task.name }}">
+                                        <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="{{ url_for('task_detail', task_id=task.id) }}">
+                                            <i class="fa fa-eye me-2" aria-hidden="true"></i>{{ tr('View', 'عرض') }}
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="bq-empty" style="padding:var(--bq-s-6) var(--bq-s-5);">
+            <div class="bq-empty__icon"><i class="fa fa-filter" aria-hidden="true"></i></div>
+            <h3 class="bq-empty__title">{{ tr('No tasks found', 'لا توجد مهام مطابقة') }}</h3>
+            <p class="bq-empty__body">{{ tr('Try clearing the filters above.', 'حاول مسح الفلاتر أعلاه.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+function switchView(v) {
+  document.getElementById('view-kanban').style.display = v === 'kanban' ? '' : 'none';
+  document.getElementById('view-list').style.display   = v === 'list'   ? '' : 'none';
+  var bk = document.getElementById('btn-kanban');
+  var bl = document.getElementById('btn-list');
+  bk.classList.toggle('bq-view-toggle__btn--active', v === 'kanban');
+  bl.classList.toggle('bq-view-toggle__btn--active', v === 'list');
+  bk.setAttribute('aria-pressed', v === 'kanban' ? 'true' : 'false');
+  bl.setAttribute('aria-pressed', v === 'list' ? 'true' : 'false');
+  localStorage.setItem('tasks_view', v);
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var saved = localStorage.getItem('tasks_view');
+  if (saved) switchView(saved);
+});
+</script>
+{% endblock %}

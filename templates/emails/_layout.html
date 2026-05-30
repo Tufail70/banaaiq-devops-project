@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="{{ lang|default('en') }}" dir="{{ dir|default('ltr') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ subject|default('BanaaIQ') }}</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #f6f3ec; color: #0a0a0a; line-height: 1.55;
+      -webkit-text-size-adjust: 100%;
+    }
+    table { border-collapse: collapse; }
+    img { border: 0; display: block; }
+    .wrap {
+      max-width: 580px; margin: 0 auto;
+      background: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(10,10,10,0.06);
+    }
+    .hdr {
+      background: #0a0a0a; color: #f4f0e6;
+      padding: 28px 32px;
+    }
+    .hdr .logo {
+      font-size: 20px; font-weight: 700;
+      color: #e8c547; letter-spacing: -0.01em;
+    }
+    .hdr .tagline {
+      font-size: 12px; color: rgba(244,240,230,0.6);
+      margin-top: 4px;
+    }
+    .body { padding: 36px 32px; }
+    h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 400; font-size: 26px;
+      line-height: 1.2; margin: 0 0 18px;
+      letter-spacing: -0.02em; color: #0a0a0a;
+    }
+    p { margin: 0 0 16px; font-size: 15px; color: #0a0a0a; }
+    .muted { color: rgba(10,10,10,0.6); font-size: 13px; }
+    .btn {
+      display: inline-block;
+      background: #e8c547; color: #0a0a0a !important;
+      text-decoration: none; padding: 13px 28px;
+      border-radius: 4px; font-weight: 600; font-size: 14px;
+      letter-spacing: 0.01em;
+    }
+    .btn:hover { background: #d4af37; }
+    .cta-wrap { text-align: center; margin: 32px 0; }
+    hr.divider {
+      border: none; border-top: 1px solid rgba(10,10,10,0.08);
+      margin: 28px 0;
+    }
+    .ar {
+      direction: rtl; text-align: right;
+      margin-top: 28px; padding-top: 24px;
+      border-top: 1px dashed rgba(10,10,10,0.10);
+      font-family: 'Cairo', 'IBM Plex Sans Arabic', Arial, sans-serif;
+    }
+    .ar h1 { font-family: 'Cairo', 'IBM Plex Sans Arabic', Arial, sans-serif; font-size: 22px; }
+    .ftr {
+      border-top: 1px solid rgba(10,10,10,0.08);
+      padding: 20px 32px;
+      font-size: 12px;
+      color: rgba(10,10,10,0.55);
+      background: #faf8f3;
+    }
+    .ftr a { color: rgba(10,10,10,0.55); }
+    /* Mobile */
+    @media (max-width: 600px) {
+      .wrap { border-radius: 0 !important; }
+      .hdr, .body, .ftr { padding-left: 20px !important; padding-right: 20px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 24px 12px; background: #f6f3ec;">
+    <div class="wrap">
+      <div class="hdr">
+        <div class="logo">BanaaIQ · <span style="font-weight:400;">بناء IQ</span></div>
+        <div class="tagline">AI-powered construction management · إدارة البناء بالذكاء الاصطناعي</div>
+      </div>
+      <div class="body">{% block content %}{% endblock %}</div>
+      <div class="ftr">
+        BanaaIQ — AI-powered construction management for the GCC.<br>
+        You received this because you have a BanaaIQ account.
+        Questions? Reply to this email or visit
+        <a href="{{ url_for('index', _external=True) }}">banaaiq.com</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

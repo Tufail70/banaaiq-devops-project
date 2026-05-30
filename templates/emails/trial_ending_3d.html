@@ -1,0 +1,28 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Your BanaaIQ trial ends in 3 days' %}
+{% block content %}
+<h1>Your trial ends in 3 days</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>Your BanaaIQ free trial ends in <strong>3 days</strong>.
+   After that, access to DPR, BOQ, inventory, tasks, and the AI workflows
+   will be paused until you're on a paid plan.</p>
+<p>Choose a plan now to keep your team moving without interruption.</p>
+
+<div class="cta-wrap">
+  <a class="btn" href="{{ url_for('pricing', _external=True) }}">Choose a plan</a>
+</div>
+
+<p class="muted">Questions? Reply to this email — we're happy to help you
+   find the right plan for your team size and project load.</p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>تجربتك تنتهي خلال 3 أيام</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>تنتهي تجربتك المجانية في BanaaIQ خلال <strong>3 أيام</strong>.
+     بعد ذلك، سيتوقف الوصول إلى التقارير اليومية وجداول الكميات والمخزون
+     والمهام وسير عمل الذكاء الاصطناعي حتى اشتراكك في خطة مدفوعة.</p>
+  <p>اختر خطة الآن لإبقاء فريقك يعمل دون انقطاع.</p>
+</div>
+{% endblock %}

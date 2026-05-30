@@ -1,0 +1,345 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ boq.title }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+
+  {# Header #}
+  <div class="boq-header mb-4">
+    <div class="boq-header__back">
+      <a href="{{ url_for('dashboard_boq_index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+    </div>
+    <div class="boq-header__info flex-grow-1">
+      <h4 class="boq-header__title mb-0">{{ boq.title }}</h4>
+      <div class="boq-header__meta mt-1">
+        {% if boq.dna_project %}{{ boq.dna_project.name }}{% elif boq.project %}{{ boq.project }}{% endif %}
+        &nbsp;·&nbsp;
+        <span class="badge {% if boq.status == 'master' %}bg-primary{% elif boq.status == 'distributed' %}bg-success{% elif boq.status == 'revised' %}bg-warning text-dark{% elif boq.status == 'archived' %}bg-secondary{% else %}bg-secondary{% endif %}">
+          {{ boq.status or 'draft' }}
+        </span>
+        &nbsp;
+        <span class="badge bg-secondary">v{{ boq.version or 1 }}</span>
+        {% if boq.trade_section %}
+        &nbsp;<span class="badge" style="background:var(--bq-gold,#c8a730);color:#0a0a0a">{{ boq.trade_section }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="boq-header__actions">
+      {# PM owner actions — hidden for engineer_manual BOQs (read-only) #}
+      {% if is_owner and current_user.role == 'project_manager' and not pm_readonly %}
+        {% if boq.status != 'archived' %}
+        <a href="{{ url_for('boq_edit_items', boq_id=boq.id) }}" class="btn btn-sm btn-outline-gold">
+          <i class="fas fa-pen me-1"></i>{{ tr('Edit Items','تعديل البنود') }}
+        </a>
+        {% endif %}
+        {% if boq.is_master %}
+        <a href="{{ url_for('boq_distribute', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-share-nodes me-1"></i>{{ tr('Distribute','توزيع') }}
+        </a>
+        {% endif %}
+        <a href="{{ url_for('boq_download_excel', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-excel me-1"></i>Excel
+        </a>
+        <a href="{{ url_for('boq_download_pdf', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-pdf me-1"></i>PDF
+        </a>
+        <form method="POST" action="{{ url_for('boq_delete', boq_id=boq.id) }}" class="d-inline" onsubmit="return confirm('{{ tr('Delete?','حذف؟') }}')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('project_workspace', id=boq.project_id) if boq.project_id else url_for('dashboard_boq_index') }}">
+          <button class="btn btn-sm btn-danger"><i class="fas fa-trash me-1"></i>{{ tr('Delete','حذف') }}</button>
+        </form>
+      {% elif pm_readonly %}
+        <span class="badge bg-secondary me-2">{{ tr('Read Only','قراءة فقط') }}</span>
+        <a href="{{ url_for('boq_download_pdf', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-pdf me-1"></i>PDF
+        </a>
+      {% endif %}
+      {# SE assigned actions #}
+      {% if is_assigned and boq.status != 'archived' %}
+        <a href="{{ url_for('boq_edit_items', boq_id=boq.id) }}" class="btn btn-sm btn-outline-gold">
+          <i class="fas fa-pen me-1"></i>{{ tr('Edit Items','تعديل البنود') }}
+        </a>
+        {% if boq.parent_master_boq_id %}
+        <a href="{{ url_for('boq_revise', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-pen me-1"></i>{{ tr('Request Revision','طلب تعديل') }}
+        </a>
+        {% endif %}
+        <a href="{{ url_for('boq_download_excel', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-excel me-1"></i>Excel
+        </a>
+        <a href="{{ url_for('boq_download_pdf', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-pdf me-1"></i>PDF
+        </a>
+        {% if boq.parent_master_boq_id and boq.status in ('revised', 'distributed') %}
+        <form method="POST" action="{{ url_for('boq_delete', boq_id=boq.id) }}" class="d-inline"
+              onsubmit="return confirm('{{ tr('Delete your revision of this BOQ?','حذف تعديلك على هذا الجدول؟') }}')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('dashboard_boq_index') }}">
+          <button class="btn btn-sm btn-danger"><i class="fas fa-trash me-1"></i>{{ tr('Delete Revision','حذف التعديل') }}</button>
+        </form>
+        {% endif %}
+      {% endif %}
+      {% if is_assigned and boq.status == 'archived' %}
+        <a href="{{ url_for('boq_download_pdf', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-pdf me-1"></i>{{ tr('Download PDF','تنزيل PDF') }}
+        </a>
+      {% endif %}
+      {# SE owner of engineer_manual BOQ #}
+      {% if is_owner and current_user.role == 'site_engineer' and boq.source == 'engineer_manual' %}
+        <a href="{{ url_for('boq_edit_items', boq_id=boq.id) }}" class="btn btn-sm btn-outline-gold">
+          <i class="fas fa-pen me-1"></i>{{ tr('Edit Items','تعديل البنود') }}
+        </a>
+        <a href="{{ url_for('boq_download_pdf', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-pdf me-1"></i>PDF
+        </a>
+        <form method="POST" action="{{ url_for('boq_delete', boq_id=boq.id) }}" class="d-inline"
+              onsubmit="return confirm('{{ tr('Delete this BOQ?','حذف هذا الجدول؟') }}')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ url_for('dashboard_boq_index') }}">
+          <button class="btn btn-sm btn-danger"><i class="fas fa-trash me-1"></i>{{ tr('Delete','حذف') }}</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Version history #}
+  {% if version_history and version_history|length > 1 %}
+  <div class="boq-version-bar mb-4">
+    <div class="boq-version-bar__label">
+      <i class="fas fa-clock-rotate-left me-1" style="color:var(--bq-gold,#c8a730)"></i>
+      {{ tr('Version History','سجل الإصدارات') }}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for vh in version_history %}
+      <a href="{{ url_for('boq_view', boq_id=vh.id) }}"
+         class="btn btn-sm {% if vh.id == boq.id %}btn-gold{% else %}btn-outline-secondary{% endif %}">
+        v{{ vh.version or 1 }}
+        <span class="ms-1 badge {% if vh.status == 'archived' %}bg-secondary{% elif vh.status == 'revised' %}bg-warning text-dark{% else %}bg-success{% endif %}" style="font-size:9px">
+          {{ vh.status }}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Totals summary bar #}
+  <div class="boq-totals mb-4">
+    <div class="boq-totals__cell">
+      <span class="boq-totals__label">{{ tr('Subtotal','المجموع الفرعي') }}</span>
+      <div class="boq-totals__value">SAR {{ "{:,.2f}".format(boq.subtotal|float) }}</div>
+    </div>
+    <div class="boq-totals__cell">
+      <span class="boq-totals__label">{{ tr('VAT 15%','ضريبة القيمة المضافة 15٪') }}</span>
+      <div class="boq-totals__value">SAR {{ "{:,.2f}".format(boq.vat_amount|float) }}</div>
+    </div>
+    <div class="boq-totals__cell boq-totals__cell--total">
+      <span class="boq-totals__label">{{ tr('Grand Total','الإجمالي الكلي') }}</span>
+      <div class="boq-totals__value">SAR {{ "{:,.2f}".format(boq.grand_total|float) }}</div>
+    </div>
+  </div>
+
+  {# BOQ sections #}
+  {% if sections %}
+  <div class="accordion boq-section-accordion" id="boq-accordion">
+    {% for sec in sections %}
+    {% if sec is mapping %}
+    <div class="accordion-item mb-3">
+      <h2 class="accordion-header">
+        <button class="accordion-button {% if not loop.first %}collapsed{% endif %} fw-semibold" type="button"
+          data-bs-toggle="collapse" data-bs-target="#sec-{{ loop.index }}" aria-expanded="{{ 'true' if loop.first else 'false' }}">
+          <span class="me-2" style="color:var(--bq-gold,#c8a730)"><i class="fas fa-layer-group"></i></span>
+          {{ sec.get('trade', tr('Section','قسم')) }}
+          {% if sec.get('trade_ar') %}
+          <span class="ms-2 small" style="color:rgba(244,240,230,0.45)">/ {{ sec.trade_ar }}</span>
+          {% endif %}
+          {% set sec_total = namespace(val=0) %}
+          {% for item in sec.get('items', []) if item is mapping %}
+            {% set sec_total.val = sec_total.val + item.get('total_sar', 0)|float %}
+          {% endfor %}
+          <span class="ms-auto badge" style="background:rgba(200,167,48,0.15);color:var(--bq-gold,#c8a730);border:1px solid rgba(200,167,48,0.3)">
+            SAR {{ "{:,.0f}".format(sec_total.val) }}
+          </span>
+        </button>
+      </h2>
+      <div id="sec-{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}">
+        <div class="accordion-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width:60px">{{ tr('#','#') }}</th>
+                  <th>{{ tr('Description','الوصف') }}</th>
+                  <th>{{ tr('Arabic','العربية') }}</th>
+                  <th style="width:60px">{{ tr('Unit','الوحدة') }}</th>
+                  <th class="text-end" style="width:80px">{{ tr('Qty','الكمية') }}</th>
+                  <th class="text-end" style="width:100px">{{ tr('Rate SAR','السعر ﷼') }}</th>
+                  <th class="text-end" style="width:120px">{{ tr('Total SAR','الإجمالي ﷼') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in sec.get('items', []) %}
+                {% if item is mapping %}
+                {% set has_detail = item.get('specification') or item.get('sub_items') or item.get('application_notes') or item.get('standard_reference') or item.get('equipment_type') %}
+                <tr {% if has_detail %}class="boq-item-main" style="cursor:pointer" onclick="toggleBoqDetail(this)" title="{{ tr('Click to expand detail','انقر لعرض التفاصيل') }}"{% endif %}>
+                  <td class="small" style="color:rgba(244,240,230,0.4)">{{ item.get('item_no','') }}</td>
+                  <td>
+                    {{ item.get('description','') }}
+                    {% if has_detail %}
+                    <i class="fas fa-chevron-right ms-1 boq-detail-chevron" style="font-size:10px;opacity:0.4;transition:transform 0.2s"></i>
+                    {% endif %}
+                  </td>
+                  <td dir="rtl" style="font-family:'Cairo',sans-serif;text-align:right;color:rgba(244,240,230,0.65)">{{ item.get('description_ar','') }}</td>
+                  <td><span class="badge bg-secondary">{{ item.get('unit','') }}</span></td>
+                  <td class="text-end">{{ "{:,.2f}".format(item.get('qty',0)|float) }}</td>
+                  <td class="text-end" style="color:rgba(244,240,230,0.65)">{{ "{:,.2f}".format(item.get('rate_sar',0)|float) }}</td>
+                  <td class="text-end fw-semibold">{{ "{:,.2f}".format(item.get('total_sar',0)|float) }}</td>
+                </tr>
+                {% if has_detail %}
+                <tr class="boq-item-detail d-none">
+                  <td colspan="7" class="p-0">
+                    <div class="boq-item-detail__body px-3 py-2 small">
+                      <div class="row g-2">
+                        {% if item.get('specification') %}
+                        <div class="col-md-6">
+                          <strong class="d-block" style="color:var(--bq-gold,#c8a730)">{{ tr('Specification','المواصفات') }}</strong>
+                          <span style="color:rgba(244,240,230,0.65)">{{ item.specification }}</span>
+                        </div>
+                        {% endif %}
+                        {% if item.get('standard_reference') %}
+                        <div class="col-md-3">
+                          <strong class="d-block" style="color:var(--bq-gold,#c8a730)">{{ tr('Standard','المرجع') }}</strong>
+                          <span class="badge bg-secondary">{{ item.standard_reference }}</span>
+                        </div>
+                        {% endif %}
+                        {% if item.get('application_notes') %}
+                        <div class="col-md-3">
+                          <strong class="d-block" style="color:var(--bq-gold,#c8a730)">{{ tr('Notes','ملاحظات') }}</strong>
+                          <span style="color:rgba(244,240,230,0.65)">{{ item.application_notes }}</span>
+                        </div>
+                        {% endif %}
+                        {% if item.get('equipment_type') or item.get('suggested_model') %}
+                        <div class="col-md-6">
+                          <strong class="d-block" style="color:var(--bq-gold,#c8a730)">{{ tr('Equipment','المعدات') }}</strong>
+                          {% if item.get('equipment_type') %}<span class="badge bg-secondary me-1">{{ item.equipment_type }}</span>{% endif %}
+                          {% if item.get('suggested_model') %}<span style="color:rgba(244,240,230,0.65)">{{ item.suggested_model }}</span>{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if item.get('accessories') %}
+                        <div class="col-md-6">
+                          <strong class="d-block" style="color:var(--bq-gold,#c8a730)">{{ tr('Accessories','الملحقات') }}</strong>
+                          {% for acc in item.accessories %}<span class="badge bg-secondary border me-1 mb-1">{{ acc }}</span>{% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.get('sub_items') %}
+                        <div class="col-12 mt-1">
+                          <strong class="d-block mb-1" style="color:var(--bq-gold,#c8a730)">{{ tr('Components / Sub-Items','المكوّنات') }}</strong>
+                          <table class="table table-sm mb-0" style="font-size:11px;max-width:600px">
+                            <thead>
+                              <tr>
+                                <th>{{ tr('Component','المكوّن') }}</th>
+                                <th class="text-end">{{ tr('Qty/Unit','الكمية/الوحدة') }}</th>
+                                <th>{{ tr('Unit','الوحدة') }}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for sub in item.sub_items if sub is mapping %}
+                              <tr>
+                                <td>{{ sub.get('name','') }}</td>
+                                <td class="text-end">{{ sub.get('qty_per_unit','') }}</td>
+                                <td>{{ sub.get('unit','') }}</td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-warning">{{ tr('No BOQ sections found.','لا توجد أقسام في هذا الجدول.') }}</div>
+  {% endif %}
+
+  {# Design files #}
+  {% if design_files %}
+  <div class="content-card mt-4 p-4">
+    <h6 class="fw-bold mb-3" style="color:var(--bq-gold,#c8a730)">
+      <i class="fas fa-paperclip me-2"></i>
+      {{ tr('Design Files','ملفات التصميم') }}
+    </h6>
+    <div class="d-flex flex-wrap gap-2">
+      {% for fp in design_files %}
+      <span class="badge bg-secondary">
+        <i class="fas fa-file me-1"></i>{{ fp.split('/')[-1][:40] }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Distributed children (PM view) #}
+  {% if is_owner and boq.is_master and distributed_children %}
+  <div class="content-card mt-4 p-4">
+    <h6 class="fw-bold mb-3" style="color:var(--bq-gold,#c8a730)">
+      <i class="fas fa-share-nodes me-2"></i>
+      {{ tr('Distributed Sections','الأقسام الموزَّعة') }}
+    </h6>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>{{ tr('Trade','الحرفة') }}</th>
+            <th>{{ tr('Assigned To','مُسند إلى') }}</th>
+            <th>{{ tr('Version','الإصدار') }}</th>
+            <th>{{ tr('Status','الحالة') }}</th>
+            <th>{{ tr('Grand Total','الإجمالي') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for child in distributed_children %}
+          <tr>
+            <td><span class="badge" style="background:rgba(200,167,48,0.15);color:var(--bq-gold,#c8a730);border:1px solid rgba(200,167,48,0.3)">{{ child.trade_section or '—' }}</span></td>
+            <td>{{ child.assigned_engineer.full_name if child.assigned_engineer else '—' }}</td>
+            <td>v{{ child.version or 1 }}</td>
+            <td><span class="badge {% if child.status == 'revised' %}bg-warning text-dark{% elif child.status == 'archived' %}bg-secondary{% else %}bg-primary{% endif %}">{{ child.status }}</span></td>
+            <td>SAR {{ "{:,.0f}".format(child.grand_total|float) }}</td>
+            <td><a href="{{ url_for('boq_view', boq_id=child.id) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-eye"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function toggleBoqDetail(row) {
+  var next = row.nextElementSibling;
+  if (next && next.classList.contains('boq-item-detail')) {
+    next.classList.toggle('d-none');
+    var chevron = row.querySelector('.boq-detail-chevron');
+    if (chevron) {
+      chevron.style.transform = next.classList.contains('d-none') ? '' : 'rotate(90deg)';
+    }
+  }
+}
+</script>
+{% endblock %}

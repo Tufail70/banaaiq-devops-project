@@ -1,0 +1,416 @@
+﻿<div class="auth-shell py-5">
+    <div class="container d-flex justify-content-center">
+        <div class="auth-card auth-card-shell card border-0 shadow-sm w-100">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <a href="{{ url_for('index') }}" class="auth-logo">BanaaIQ</a>
+	                    <p class="small text-muted mb-0">Enterprise construction intelligence for project teams</p>
+                </div>
+
+                <ul class="nav nav-tabs auth-tabs mb-3" id="authTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link auth-tab-link {{ 'active' if active_tab != 'register' else '' }}" id="signin-tab" data-bs-toggle="tab" data-bs-target="#signin-pane" type="button" role="tab" aria-controls="signin-pane" aria-selected="{{ 'true' if active_tab != 'register' else 'false' }}">Sign In</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link auth-tab-link {{ 'active' if active_tab == 'register' else '' }}" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-pane" type="button" role="tab" aria-controls="register-pane" aria-selected="{{ 'true' if active_tab == 'register' else 'false' }}">Create Account</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="authTabsContent">
+                    <div class="tab-pane fade {{ 'show active' if active_tab != 'register' else '' }}" id="signin-pane" role="tabpanel" aria-labelledby="signin-tab">
+                        <form method="post" action="{{ url_for('auth_login') }}" id="loginForm" novalidate>
+                            {{ login_form.hidden_tag() }}
+                            <input type="hidden" name="form_type" value="login">
+                            <input type="hidden" name="next" value="{{ next_url or '' }}">
+                            <div class="mb-3">
+                                <label for="{{ login_form.email.id }}" class="form-label">Email</label>
+                                {{ login_form.email(class_='form-control', placeholder='name@company.com') }}
+                                <small class="text-danger field-error" data-for="{{ login_form.email.id }}"></small>
+                            </div>
+                            <div class="mb-2">
+                                <label for="{{ login_form.password.id }}" class="form-label">Password</label>
+                                <div class="input-group">
+                                    {{ login_form.password(class_='form-control password-input', placeholder='Enter password') }}
+                                    <button class="btn btn-outline-secondary toggle-password" type="button"><i class="fa-regular fa-eye"></i></button>
+                                </div>
+                                <small class="text-danger field-error" data-for="{{ login_form.password.id }}"></small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <label class="d-flex align-items-center gap-2 mb-0 small" style="cursor:pointer;">
+                                    <input type="checkbox" name="remember_me" value="1" class="form-check-input mt-0">
+                                    Remember me for 30 days / تذكرني لمدة 30 يوماً
+                                </label>
+                                <a class="small" href="{{ url_for('auth_forgot') }}">Forgot Password?</a>
+                            </div>
+                            <button type="submit" class="btn btn-gold w-100">Login</button>
+
+                            <div class="auth-help-links text-center mt-3" style="font-size:13px; color:rgba(255,255,255,0.45);">
+                                <a href="{{ url_for('auth_forgot') }}" class="text-muted">
+                                    Forgot password? / نسيت كلمة المرور؟
+                                </a>
+                                <span class="mx-2" aria-hidden="true">·</span>
+                                <a href="{{ url_for('contact') }}?subject=account_recovery" class="text-muted">
+                                    Forgot email or company? / نسيت البريد أو الشركة؟
+                                </a>
+                            </div>
+                        </form>
+
+                        <div class="auth-divider my-3">&mdash; or continue with &mdash;</div>
+                        <a
+                            class="btn btn-outline-secondary w-100 mb-2 google-login-btn"
+                            id="google-login-btn"
+                            data-provider="google"
+                            href="{{ url_for('auth_social', provider='google') }}"
+                        ><i class="fa-brands fa-google"></i> Continue with Google</a>
+                        <a
+                            class="btn btn-outline-secondary w-100 linkedin-login-btn"
+                            id="linkedin-login-btn"
+                            data-provider="linkedin"
+                            href="{{ url_for('auth_social', provider='linkedin') }}"
+                        ><i class="fa-brands fa-linkedin"></i> Continue with LinkedIn</a>
+
+                        <div class="auth-divider my-3">&mdash; or &mdash;</div>
+	                        <a class="btn btn-outline-navy w-100" href="{{ url_for('auth_guest') }}">Open Demo Command Workspace</a>
+	                        <p class="text-muted small text-center mt-2 mb-0">Review an executive operations sample for Al Noor Development Co.</p>
+                    </div>
+
+                    <div class="tab-pane fade {{ 'show active' if active_tab == 'register' else '' }}" id="register-pane" role="tabpanel" aria-labelledby="register-tab">
+                        <form method="post" action="{{ url_for('auth_register') }}" id="register-form" class="register-form" novalidate>
+                            {{ register_form.hidden_tag() }}
+                            <input type="hidden" name="next" value="{{ next_url or '' }}">
+                            <div class="mb-3">
+                                <label for="{{ register_form.full_name.id }}" class="form-label">Full Name</label>
+                                {{ register_form.full_name(class_='form-control', placeholder='Your full name') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.full_name.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.company.id }}" class="form-label">Company Name</label>
+                                {{ register_form.company(class_='form-control', placeholder='Company') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.company.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.account_type.id }}" class="form-label">Account Type</label>
+                                {{ register_form.account_type(class_='form-select', id='register-account-type-select') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.account_type.id }}"></small>
+                                <div class="form-text" style="color:#a0aec0;font-size:12px;">
+                                    Project Manager — creates &amp; manages projects.
+                                    Site Engineer — works on assigned packages.
+                                </div>
+                            </div>
+                            <div class="mb-3" id="job-title-field" style="display:none;">
+                                <label for="{{ register_form.job_title.id }}" class="form-label">Job Title</label>
+                                {{ register_form.job_title(class_='form-select', id='register-job-title-select') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.job_title.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.email.id }}" class="form-label">Email</label>
+                                {{ register_form.email(class_='form-control', placeholder='name@company.com') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.email.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">
+                                    Phone Number <span style="color:#dc3545">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background:#1a2a45; border-color:#2d4060; color:#a0aec0; font-size:13px;">
+                                        +
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        class="form-control"
+                                        id="phone"
+                                        name="phone"
+                                        value="{{ request.form.get('phone', '') }}"
+                                        placeholder="e.g. 966501234567"
+                                        pattern="[0-9+\s\-]{7,20}"
+                                        required
+                                        style="background:#1a2a45; border-color:#2d4060; color:white;"
+                                    >
+                                </div>
+                                <div class="form-text" style="color:#a0aec0; font-size:12px;">
+                                    Include country code — e.g. 966 for Saudi Arabia, 91 for India
+                                </div>
+                                <small class="text-danger field-error" data-for="phone"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.country.id }}" class="form-label">
+                                    Country <span style="color:#dc3545">*</span>
+                                </label>
+                                {{ register_form.country(class_='form-select') }}
+                                <div class="form-text" style="color:#a0aec0;font-size:12px;">
+                                    Sets your default currency and invoice format (INR/GST for India, SAR/VAT for KSA).
+                                </div>
+                                <small class="text-danger field-error" data-for="{{ register_form.country.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.password.id }}" class="form-label">Password</label>
+                                <div class="input-group">
+                                    {{ register_form.password(class_='form-control password-input', placeholder='Minimum 8 characters') }}
+                                    <button class="btn btn-outline-secondary toggle-password" type="button"><i class="fa-regular fa-eye"></i></button>
+                                </div>
+                                <small class="text-danger field-error" data-for="{{ register_form.password.id }}"></small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ register_form.confirm_password.id }}" class="form-label">Confirm Password</label>
+                                {{ register_form.confirm_password(class_='form-control', placeholder='Repeat password') }}
+                                <small class="text-danger field-error" data-for="{{ register_form.confirm_password.id }}"></small>
+                            </div>
+                            <!-- Legal consent checkbox -->
+                            <div class="mb-3">
+                                <div class="auth-legal-consent">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="legal-consent"
+                                            name="legal_consent"
+                                            required
+                                            onchange="checkLegalConsent()"
+                                            class="auth-legal-checkbox"
+                                        >
+                                        <label for="legal-consent" class="auth-legal-copy">
+                                            I have read and agree to the
+                                            <a href="/terms-of-service"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="auth-legal-link">
+                                                Terms of Service
+                                            </a>
+                                            and
+                                            <a href="/privacy-policy"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="auth-legal-link">
+                                                Privacy Policy
+                                            </a>
+                                            of BanaaIQ. I also acknowledge the
+                                            <a href="/data-ai-disclosure"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="auth-legal-link">
+                                                Data &amp; AI Disclosure
+                                            </a>
+                                            regarding how AI processes my data.
+                                        </label>
+                                    </div>
+
+                                    <!-- Validation error message -->
+                                    <div
+                                        id="consent-error"
+                                        class="consent-error"
+                                        {% if register_error %}style="display:block;"{% endif %}
+                                    >
+                                        <i class="fa fa-exclamation-circle me-1"></i>
+                                        {{ register_error or 'You must agree to the Terms of Service and Privacy Policy to continue.' }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Register button (disabled until checkbox) -->
+                            <button
+                                type="submit"
+                                id="register-submit-btn"
+                                disabled
+                                class="btn btn-gold auth-submit-btn"
+                            >
+                                <i class="fa fa-user-plus me-2"></i>
+                                Create Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function checkLegalConsent() {
+    const checkbox = document.getElementById(
+        'legal-consent'
+    )
+    const btn = document.getElementById(
+        'register-submit-btn'
+    )
+    const errorEl = document.getElementById(
+        'consent-error'
+    )
+
+    if (!checkbox || !btn) return
+
+    if (checkbox.checked) {
+        btn.disabled = false
+        if (errorEl) {
+            errorEl.style.display = 'none'
+        }
+    } else {
+        btn.disabled = true
+    }
+}
+
+(function () {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function setError(id, message) {
+        const el = document.querySelector(`.field-error[data-for="${id}"]`);
+        if (el) el.textContent = message || "";
+    }
+
+    function validateLoginForm(e) {
+        const form = e.target;
+        let valid = true;
+        const email = form.querySelector('input[name="login-email"]');
+        const password = form.querySelector('input[name="login-password"]');
+
+        if (email) setError(email.id, "");
+        if (password) setError(password.id, "");
+
+        if (email && (!email.value.trim() || !emailPattern.test(email.value.trim()))) {
+            setError(email.id, "Please enter a valid email address.");
+            valid = false;
+        }
+        if (password && (!password.value || password.value.length < 8)) {
+            setError(password.id, "Password must be at least 8 characters.");
+            valid = false;
+        }
+        if (!valid) e.preventDefault();
+    }
+
+    function validateRegisterForm(e) {
+        const form = e.target;
+        let valid = true;
+        const requiredFields = [
+            form.querySelector('input[name="register-full_name"]'),
+            form.querySelector('input[name="register-company"]'),
+            form.querySelector('select[name="register-account_type"]'),
+            form.querySelector('input[name="register-email"]'),
+            form.querySelector('input[name="register-password"]'),
+            form.querySelector('input[name="register-confirm_password"]')
+        ];
+        const checkbox = document.getElementById(
+            'legal-consent'
+        )
+        const errorEl = document.getElementById(
+            'consent-error'
+        )
+
+        requiredFields.forEach((field) => {
+            if (field) setError(field.id, "");
+        });
+
+        requiredFields.forEach((field) => {
+            if (field && !field.value.trim()) {
+                setError(field.id, "This field is required.");
+                valid = false;
+            }
+        });
+
+        const emailField = form.querySelector('input[name="register-email"]');
+        if (
+            emailField &&
+            emailField.value.trim() &&
+            !emailPattern.test(emailField.value.trim())
+        ) {
+            setError(emailField.id, "Please enter a valid email address.");
+            valid = false;
+        }
+
+        const phoneField = document.getElementById('phone');
+        const phone = phoneField ? phoneField.value.trim() : '';
+        if (phoneField) {
+            setError(phoneField.id, "");
+        }
+        if (!phone) {
+            if (phoneField) {
+                setError(phoneField.id, "Phone number is required.");
+            }
+            valid = false;
+        } else if (!/^[0-9+\s\-]{7,20}$/.test(phone)) {
+            if (phoneField) {
+                setError(phoneField.id, "Please enter a valid phone number with country code.");
+            }
+            valid = false;
+        }
+
+        const passwordField = form.querySelector('input[name="register-password"]');
+        const confirmField = form.querySelector('input[name="register-confirm_password"]');
+        if (
+            passwordField &&
+            passwordField.value &&
+            passwordField.value.length < 8
+        ) {
+            setError(passwordField.id, "Password must be at least 8 characters.");
+            valid = false;
+        }
+        if (
+            passwordField &&
+            confirmField &&
+            passwordField.value !== confirmField.value
+        ) {
+            setError(confirmField.id, "Passwords do not match.");
+            valid = false;
+        }
+
+        if (checkbox && !checkbox.checked) {
+            if (errorEl) {
+                errorEl.style.display = 'block'
+            }
+            checkbox.focus()
+            valid = false;
+        }
+
+        if (!valid) e.preventDefault();
+    }
+
+    document.querySelectorAll('.toggle-password').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const input = btn.closest('.input-group').querySelector('.password-input, input[type="password"], input[type="text"]');
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            btn.innerHTML = input.type === 'password' ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+        });
+    });
+
+    // Show / hide job-title field based on account type selection
+    function toggleJobTitleField() {
+        const accountTypeSelect = document.getElementById('register-account-type-select');
+        const jobTitleField = document.getElementById('job-title-field');
+        if (!accountTypeSelect || !jobTitleField) return;
+        if (accountTypeSelect.value === 'site_engineer') {
+            jobTitleField.style.display = '';
+        } else {
+            jobTitleField.style.display = 'none';
+            // Clear value when hidden so it isn't submitted as required
+            const jobTitleSelect = document.getElementById('register-job-title-select');
+            if (jobTitleSelect) jobTitleSelect.value = '';
+        }
+    }
+
+    document.addEventListener(
+        'DOMContentLoaded', function() {
+            checkLegalConsent()
+
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.querySelector(
+                '#register-form, .register-form, ' +
+                'form[id*="register"]'
+            )
+
+            if (loginForm) {
+                loginForm.addEventListener('submit', validateLoginForm);
+            }
+            if (registerForm) {
+                registerForm.addEventListener(
+                    'submit', validateRegisterForm
+                );
+            }
+
+            // Wire account-type change → job-title visibility
+            const accountTypeSelect = document.getElementById('register-account-type-select');
+            if (accountTypeSelect) {
+                accountTypeSelect.addEventListener('change', toggleJobTitleField);
+                toggleJobTitleField(); // run once on page load
+            }
+        }
+    )
+})();
+</script>

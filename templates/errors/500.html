@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}500 | {{ tr('Server Error', '??? ?? ??????') }}{% endblock %}
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="content-card p-5 text-center">
+            <h1 class="display-4 fw-bold">500</h1>
+            <p class="lead">{{ tr('Something went wrong on our side. Please try again later.', '??? ??? ?? ?????. ???? ???????? ??????.') }}</p>
+            <a href="{{ url_for('index') }}" class="btn btn-accent">{{ tr('Back to Home', '?????? ????????') }}</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

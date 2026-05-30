@@ -1,0 +1,343 @@
+{% extends 'legal/base_legal.html' %}
+{% block page_title %}Data & AI Disclosure{% endblock %}
+{% block content %}
+
+<div class="legal-wrapper">
+
+  <div class="legal-header">
+    <div class="doc-type">Transparency Document</div>
+    <h1>Data &amp; AI Disclosure</h1>
+    <div class="meta">
+      <span><i class="fa fa-calendar"></i>
+        Last Updated: April 2025</span>
+      <span><i class="fa fa-code-branch"></i>
+        Version v1.0 — Beta Release</span>
+      <span><i class="fa fa-globe"></i>
+        India &amp; Saudi Arabia</span>
+    </div>
+  </div>
+
+  <div class="legal-content">
+
+    <div class="notice-info">
+      <strong>Our Commitment</strong>
+      We believe you have the right to know exactly
+      how AI is used and what happens to your data.
+      This document explains everything in plain
+      language.
+    </div>
+
+    <h2>1. Purpose of This Disclosure</h2>
+    <p>
+      BanaaIQ is committed to full transparency
+      about how Artificial Intelligence is used
+      within our platform. This document explains
+      what happens to your data when you use
+      BanaaIQ's AI-powered features, which
+      third-party AI providers are involved, and
+      what risks you should be aware of.
+    </p>
+
+    <h2>2. AI Technology We Use</h2>
+    <table class="legal-table">
+      <thead>
+        <tr>
+          <th>AI Provider</th>
+          <th>Technology</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>OpenAI (USA)</strong></td>
+          <td>GPT-4o / GPT-4o mini</td>
+          <td>Powers all AI features
+              on BanaaIQ</td>
+        </tr>
+        <tr>
+          <td><strong>Amazon Web Services</strong>
+          </td>
+          <td>Cloud Infrastructure
+              (Mumbai)</td>
+          <td>Hosts and stores all
+              platform data</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. How AI Is Used in Each Feature</h2>
+
+    <h3>3.1 DPR Report Generation</h3>
+    <ul>
+      <li><strong>You input:</strong> Site progress
+          data, work completed, resources used,
+          issues faced</li>
+      <li><strong>AI processes:</strong> Structures
+          data into a professional Daily Progress
+          Report</li>
+      <li><strong>Output:</strong> Formatted DPR
+          report ready to share with project
+          stakeholders</li>
+      <li><strong>Data sent to OpenAI:</strong>
+          The text you enter about your site's
+          daily progress</li>
+    </ul>
+
+    <h3>3.2 BOQ Analysis</h3>
+    <ul>
+      <li><strong>You input:</strong> Bill of
+          Quantities data, material lists,
+          quantities, cost information</li>
+      <li><strong>AI processes:</strong> Analyzes
+          quantities, identifies anomalies,
+          provides cost insights</li>
+      <li><strong>Output:</strong> AI-generated
+          BOQ analysis report with
+          recommendations</li>
+      <li><strong>Data sent to OpenAI:</strong>
+          BOQ text data and quantity details
+          you enter</li>
+    </ul>
+
+    <h3>3.3 Inventory Management</h3>
+    <ul>
+      <li><strong>You input:</strong> Material
+          names, quantities, stock levels,
+          supplier information</li>
+      <li><strong>AI processes:</strong> Provides
+          inventory insights, low-stock alerts,
+          usage predictions</li>
+      <li><strong>Output:</strong> Inventory
+          recommendations and alerts</li>
+      <li><strong>Data sent to OpenAI:</strong>
+          Material names and quantity data
+          entered in the system</li>
+    </ul>
+
+    <h3>3.4 Task Management</h3>
+    <ul>
+      <li><strong>You input:</strong> Task
+          descriptions, engineer assignments,
+          deadlines, priorities</li>
+      <li><strong>AI processes:</strong> Optimizes
+          task assignments and provides progress
+          insights</li>
+      <li><strong>Output:</strong> Task
+          recommendations and progress
+          summaries</li>
+      <li><strong>Data sent to OpenAI:</strong>
+          Task descriptions and assignment
+          details</li>
+    </ul>
+
+    <h2>4. What Data Goes to OpenAI</h2>
+    <table class="legal-table">
+      <thead>
+        <tr>
+          <th>Data Type</th>
+          <th>Sent to OpenAI?</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Text inputs for AI features</td>
+          <td><strong style="color:#dc3545;">
+            YES</strong></td>
+          <td>Core AI processing
+              requirement</td>
+        </tr>
+        <tr>
+          <td>Your name and email</td>
+          <td><strong style="color:#28a745;">
+            NO</strong></td>
+          <td>Stays within BanaaIQ
+              only</td>
+        </tr>
+        <tr>
+          <td>Login credentials</td>
+          <td><strong style="color:#28a745;">
+            NO</strong></td>
+          <td>Encrypted, never
+              shared</td>
+        </tr>
+        <tr>
+          <td>Payment information</td>
+          <td><strong style="color:#28a745;">
+            NO</strong></td>
+          <td>Not collected
+              during beta</td>
+        </tr>
+        <tr>
+          <td>Device / IP information</td>
+          <td><strong style="color:#28a745;">
+            NO</strong></td>
+          <td>Stays within BanaaIQ
+              only</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. OpenAI's Data Handling</h2>
+    <ul>
+      <li>OpenAI processes your text inputs and
+          returns AI responses to BanaaIQ.</li>
+      <li>As of 2024, OpenAI does NOT use API
+          data to train its models by
+          default.</li>
+      <li>OpenAI may retain API inputs and outputs
+          for up to 30 days for safety monitoring,
+          then deletes them.</li>
+      <li>OpenAI's servers are located in the
+          United States — data crosses
+          international borders when you use
+          AI features.</li>
+      <li>For more information, visit:
+          <a href="https://openai.com/privacy"
+             target="_blank">
+            openai.com/privacy
+          </a>
+      </li>
+    </ul>
+
+    <div class="notice-warning">
+      <strong>Cross-Border Notice</strong>
+      By using BanaaIQ's AI features, you consent
+      to your text inputs being processed by
+      OpenAI's servers in the United States. This
+      is a cross-border data transfer under Indian
+      DPDP Act and Saudi PDPL.
+    </div>
+
+    <h2>6. AI Limitations &amp; Risks</h2>
+    <table class="legal-table">
+      <thead>
+        <tr>
+          <th>Risk</th>
+          <th>What This Means for You</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AI Hallucination</strong>
+          </td>
+          <td>AI may generate plausible-sounding
+              but incorrect information. Always
+              verify DPR and BOQ outputs with
+              your engineering team before
+              use.</td>
+        </tr>
+        <tr>
+          <td><strong>Context Limitations</strong>
+          </td>
+          <td>AI does not fully understand your
+              site's physical conditions, local
+              regulations, or project-specific
+              risks.</td>
+        </tr>
+        <tr>
+          <td><strong>Not a Licensed
+              Engineer</strong></td>
+          <td>AI output is NOT equivalent to
+              advice from a licensed civil or
+              structural engineer. It is a
+              productivity tool only.</td>
+        </tr>
+        <tr>
+          <td><strong>Data Quality</strong></td>
+          <td>AI output quality depends entirely
+              on the data you input. Inaccurate
+              inputs will produce inaccurate
+              outputs.</td>
+        </tr>
+        <tr>
+          <td><strong>Regulatory
+              Compliance</strong></td>
+          <td>AI-generated BOQ and DPR must be
+              reviewed for compliance with local
+              construction regulations in India
+              or Saudi Arabia before official
+              use.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="notice-warning">
+      <strong>Critical Safety Notice</strong>
+      All AI-generated content on BanaaIQ MUST be
+      reviewed and approved by a qualified licensed
+      engineer before being implemented on any
+      construction site. BanaaIQ is a productivity
+      and decision-support tool — NOT a replacement
+      for professional engineering expertise.
+    </div>
+
+    <h2>7. Your Rights Regarding AI Processing</h2>
+    <ul>
+      <li><strong>Right to know</strong> when AI
+          is being used — BanaaIQ clearly labels
+          all AI-generated content.</li>
+      <li><strong>Right to opt out</strong> of AI
+          features — manual data entry options
+          are available.</li>
+      <li><strong>Right to request deletion</strong>
+          of your AI interaction data by emailing
+          <a href="mailto:iqbaana@gmail.com">
+            iqbaana@gmail.com
+          </a>.</li>
+      <li><strong>Right to provide feedback</strong>
+          on AI-generated content directly within
+          the platform.</li>
+      <li><strong>Right not to be subject</strong>
+          to decisions made solely by automated
+          AI without human review.</li>
+    </ul>
+
+    <h2>8. How We Minimize Data Shared
+        with AI</h2>
+    <ul>
+      <li>We do not send your personal identity
+          information (name, email, phone)
+          to OpenAI.</li>
+      <li>We encourage users to avoid entering
+          personally identifiable worker
+          information in AI prompts.</li>
+      <li>We apply usage limits to prevent
+          excessive data being sent
+          to OpenAI.</li>
+      <li>We regularly review what data is sent
+          to OpenAI to ensure minimum necessary
+          sharing.</li>
+    </ul>
+
+    <h2 id="beta">9. Future AI Features</h2>
+    <p>
+      BanaaIQ may introduce additional AI features
+      in the future. Any new AI integrations will
+      be disclosed to users before implementation,
+      added to this Data &amp; AI Disclosure
+      document, and subject to user consent where
+      required by law.
+    </p>
+
+    <h2>10. Contact</h2>
+    <div class="notice-info">
+      <strong>AI &amp; Data Contact</strong>
+      Shah Muqeem Ullah Quadri | BanaaIQ |
+      <a href="mailto:iqbaana@gmail.com">
+        iqbaana@gmail.com
+      </a>
+      | Hyderabad, India — We respond to all AI
+      and data inquiries within 14 business days.
+    </div>
+
+    <a class="back-to-top"
+       onclick="scrollToTop()">
+      <i class="fa fa-arrow-up"></i>
+      Back to Top
+    </a>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Edit Task | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width:720px;">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('task_detail', task_id=task.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+    <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+      <i class="fas fa-pen me-2" style="color:#F59E0B;"></i>
+      Edit Task <small class="text-muted fs-6">/ تعديل المهمة</small>
+    </h4>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('task_edit', task_id=task.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="content-card p-4">
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Task Name <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control" value="{{ task.name }}" maxlength="200" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Assigned To / مسند إليه</label>
+        <select name="assigned_to_id" class="form-select">
+          {% for m in members %}
+          <option value="{{ m.id }}" {{ 'selected' if task.assigned_to_id == m.id else '' }}>
+            {{ m.name }} ({{ m.role }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Status / الحالة</label>
+          <select name="status" class="form-select">
+            {% for key, label in task_status_labels.items() %}
+            <option value="{{ key }}" {{ 'selected' if task.status == key else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Priority / الأولوية</label>
+          <select name="priority" class="form-select">
+            <option value="low"    {{ 'selected' if task.priority == 'low'    else '' }}>Low / منخفض</option>
+            <option value="normal" {{ 'selected' if task.priority == 'normal' else '' }}>Normal / عادي</option>
+            <option value="high"   {{ 'selected' if task.priority == 'high'   else '' }}>High / عالي</option>
+            <option value="urgent" {{ 'selected' if task.priority == 'urgent' else '' }}>Urgent / عاجل</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Due Date <small class="text-muted fw-normal">(optional)</small></label>
+        <input type="date" name="due_date" class="form-control" style="max-width:220px;"
+               value="{{ task.due_date.isoformat() if task.due_date else '' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Description <small class="text-muted fw-normal">(optional)</small></label>
+        <textarea name="description" class="form-control" rows="3">{{ task.description or '' }}</textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Remarks <small class="text-muted fw-normal">(optional)</small></label>
+        <textarea name="remarks" class="form-control" rows="2">{{ task.remarks or '' }}</textarea>
+      </div>
+
+      {% if dep_candidates %}
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Depends On <small class="text-muted fw-normal">(optional)</small></label>
+        <select name="depends_on_task_id" class="form-select">
+          <option value="">None</option>
+          {% for dep in dep_candidates %}
+          <option value="{{ dep.id }}" {{ 'selected' if task.depends_on_task_id == dep.id else '' }}>
+            {{ dep.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-gold fw-semibold px-4">
+          <i class="fas fa-check me-1"></i> Save Changes / حفظ
+        </button>
+        <a href="{{ url_for('task_detail', task_id=task.id) }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </div>
+  </form>
+</div>
+{% endblock %}

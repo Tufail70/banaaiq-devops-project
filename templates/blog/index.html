@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Blog | BanaaIQ{% endblock %}
+{% block content %}
+{% set ar_posts = {
+  'predictive-inventory-management-ksa': {
+    'category': 'المشتريات',
+    'title': 'كيف توفر إدارة المخزون التنبؤية الملايين في المشاريع الكبرى',
+    'excerpt': 'لماذا تصبح إدارة المواد القائمة على التوقعات تخصصاً أساسياً لقيادة المشاريع'
+  },
+  'multilingual-construction-teams-best-practices': {
+    'category': 'عمليات الموقع',
+    'title': 'إدارة فرق البناء متعددة اللغات: أفضل الممارسات العربية الإنجليزية',
+    'excerpt': 'طرق تقليل إعادة العمل وحوادث السلامة من خلال التنسيق ثنائي اللغة'
+  },
+  'vision-2030-ai-construction': {
+    'category': 'السوق السعودي',
+    'title': 'رؤية 2030 وصعود البناء المدعوم بالذكاء الاصطناعي في المملكة',
+    'excerpt': 'كيف تعيد التسليم الرقمي وسير العمل بالذكاء الاصطناعي تشكيل نتائج المشاريع الكبرى'
+  }
+} %}
+
+<section class="blog-hero">
+  <div class="container">
+    <p class="blog-hero__eyebrow">{{ 'رؤى' if is_arabic else 'Insights' }}</p>
+    <h1 class="blog-hero__title">
+      {{ 'رؤى BanaaIQ' if is_arabic else 'BanaaIQ Insights' }}
+    </h1>
+    <p class="blog-hero__lead">
+      {{ 'تحليل الصناعة والإرشادات العملية لفرق البناء في المملكة العربية السعودية' if is_arabic else 'Industry analysis and practical guidance for construction teams in Saudi Arabia.' }}
+    </p>
+  </div>
+</section>
+
+<section class="blog-section">
+  <div class="container">
+    <div class="blog-grid">
+      {% for post in posts %}
+      {% set localized = ar_posts.get(post.slug, {}) %}
+      <article class="blog-card">
+        <span class="blog-card__badge">{{ localized.category if is_arabic else post.category }}</span>
+        <h2 class="blog-card__title">{{ localized.title if is_arabic else post.title }}</h2>
+        <p class="blog-card__excerpt">{{ localized.excerpt if is_arabic else post.excerpt }}</p>
+        <a class="blog-card__link" href="{{ url_for('blog_article', slug=post.slug) }}">
+          {{ 'اقرأ المقال' if is_arabic else 'Read Article' }}
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Action required — BanaaIQ payment failed' %}
+{% block content %}
+<h1>Payment failed</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>We couldn't process your latest BanaaIQ payment.</p>
+
+<table style="width:100%;margin:20px 0;">
+  <tr>
+    <td style="padding:6px 0;color:rgba(10,10,10,0.65);font-size:14px;">Amount due</td>
+    <td style="padding:6px 0;text-align:right;font-size:14px;font-weight:600;">
+      SAR {{ "{:,.2f}".format(invoice.total_amount or 0) if invoice else '—' }}
+    </td>
+  </tr>
+  {% if last4 %}
+  <tr>
+    <td style="padding:6px 0;color:rgba(10,10,10,0.65);font-size:14px;">Card ending</td>
+    <td style="padding:6px 0;text-align:right;font-size:14px;">{{ last4 }}</td>
+  </tr>
+  {% endif %}
+  {% if next_retry %}
+  <tr>
+    <td style="padding:6px 0;color:rgba(10,10,10,0.65);font-size:14px;">Next retry</td>
+    <td style="padding:6px 0;text-align:right;font-size:14px;">
+      {{ next_retry.strftime('%d %b %Y') }}
+    </td>
+  </tr>
+  {% endif %}
+</table>
+
+<p>Please update your payment method before the retry to avoid service interruption.</p>
+
+<div class="cta-wrap">
+  <a class="btn" href="{{ url_for('billing', _external=True) }}">Update payment method</a>
+</div>
+
+<p class="muted">If you believe this is an error, please reply to this email or
+   contact your card issuer.</p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>فشل الدفع</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>لم نتمكن من معالجة دفعتك الأخيرة لـ BanaaIQ.
+     يُرجى تحديث طريقة الدفع قبل موعد إعادة المحاولة لتجنب انقطاع الخدمة.</p>
+</div>
+{% endblock %}

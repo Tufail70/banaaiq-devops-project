@@ -1,0 +1,65 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Security Settings | BanaaIQ{% endblock %}
+{% block content %}
+{{ super() }}
+<div class="dashboard-main bq-dark" style="padding: 32px 24px; max-width: 760px;">
+
+  <div class="mb-4">
+    <h2 class="bq-page-title" style="font-size:1.5rem; font-weight:700; color:var(--bq-bone);">
+      Security / الأمان
+    </h2>
+    <p class="bq-muted" style="color:var(--bq-ink-3); font-size:14px;">
+      Manage your account security and active sessions. /
+      إدارة أمان حسابك والجلسات النشطة.
+    </p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Active sessions card -->
+  <div class="bq-card" style="margin-bottom: 16px;">
+    <h3 class="bq-card__title" style="font-size:1rem; font-weight:600; color:var(--bq-bone); margin-bottom:8px;">
+      Active Sessions / الجلسات النشطة
+    </h3>
+    <p style="font-size:14px; color:var(--bq-ink-3); margin-bottom:16px;">
+      You are currently signed in on this device.
+      Sign out everywhere if you suspect unauthorized access. /
+      تم تسجيل دخولك على هذا الجهاز.
+      سجل الخروج من جميع الأجهزة إذا اشتبهت بوصول غير مصرح به.
+    </p>
+    <form method="POST" action="{{ url_for('sign_out_everywhere') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="btn btn-danger"
+              style="font-size:14px; font-weight:600;"
+              onclick="return confirm('Sign out on all other devices? / تسجيل الخروج من جميع الأجهزة الأخرى؟')">
+        <i class="fa fa-sign-out-alt me-2"></i>
+        Sign out everywhere / تسجيل الخروج من كل مكان
+      </button>
+    </form>
+  </div>
+
+  <!-- Change password card -->
+  <div class="bq-card">
+    <h3 class="bq-card__title" style="font-size:1rem; font-weight:600; color:var(--bq-bone); margin-bottom:8px;">
+      Change Password / تغيير كلمة المرور
+    </h3>
+    <p style="font-size:14px; color:var(--bq-ink-3); margin-bottom:16px;">
+      Update your password. You will be notified by email after the change. /
+      قم بتحديث كلمة المرور. ستتلقى إشعاراً عبر البريد الإلكتروني بعد التغيير.
+    </p>
+    <a href="{{ url_for('auth_change_password') }}" class="btn btn-outline-secondary" style="font-size:14px;">
+      <i class="fa fa-key me-2"></i>
+      Update password / تحديث كلمة المرور
+    </a>
+  </div>
+
+</div>
+{% endblock %}

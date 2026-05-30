@@ -1,0 +1,126 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Distribute Inventory | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_batch_view', batch_id=batch_id) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+        <i class="fas fa-share-nodes me-2" style="color:#F59E0B;"></i>
+        Distribute Inventory
+        <small class="text-muted fs-6 ms-2">/ توزيع المخزون</small>
+      </h4>
+      <small class="text-muted">
+        Batch #{{ batch_id[:8] | upper }}
+        {% if project %} &mdash; {{ project.name }}{% endif %}
+      </small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not engineers %}
+  <div class="alert alert-warning">
+    <i class="fas fa-triangle-exclamation me-2"></i>
+    No site engineers are assigned to this project yet.
+    <a href="{{ url_for('projects_list') }}" class="alert-link ms-1">Go to Projects</a> to assign engineers first.
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('inventory_batch_distribute', batch_id=batch_id) }}" id="distribute-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% for cat_name, items in categories.items() %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header py-3 fw-bold" style="background:#0B3C5D;color:#fff;">
+        <i class="fas fa-tag me-2" style="color:#F59E0B;"></i>{{ cat_name }}
+        <span class="badge bg-gold-soft text-dark ms-2">{{ items | length }} items</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle small">
+            <thead style="background:#f8f9fa;">
+              <tr>
+                <th class="ps-3">Item</th>
+                <th>Unit</th>
+                <th>Total Stock</th>
+                <th>Assign To</th>
+                <th>Allocated Qty</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+              {% set existing_a = existing_assignments.get(item.id) %}
+              <tr>
+                <td class="ps-3">
+                  <input type="hidden" name="item_id" value="{{ item.id }}">
+                  <div class="fw-semibold">{{ item.name }}</div>
+                  {% if item.name_ar %}
+                    <div class="text-muted small" dir="rtl">{{ item.name_ar }}</div>
+                  {% endif %}
+                </td>
+                <td>{{ item.unit or '—' }}</td>
+                <td class="fw-semibold">{{ '{:,.1f}'.format(item.stock | float) }}</td>
+                <td>
+                  <select name="engineer_id" class="form-select form-select-sm" style="min-width:160px;"
+                          {% if not engineers %}disabled{% endif %}>
+                    <option value="">— Select Engineer —</option>
+                    {% for eng in engineers %}
+                    <option value="{{ eng.id }}"
+                      {% if existing_a and existing_a.assigned_user_id == eng.id %}selected{% endif %}>
+                      {{ eng.full_name }} ({{ eng.job_title or 'SE' }})
+                    </option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="number" name="allocated_qty"
+                         value="{{ existing_a.allocated_qty | float if existing_a else '' }}"
+                         class="form-control form-control-sm"
+                         step="0.001" min="0"
+                         max="{{ item.stock | float }}"
+                         placeholder="0"
+                         style="width:100px;"
+                         {% if not engineers %}disabled{% endif %}>
+                </td>
+                <td>
+                  {% if existing_a %}
+                    <span class="badge bg-success">Assigned</span>
+                  {% else %}
+                    <span class="badge bg-light text-dark">Pending</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="d-flex gap-2 mt-3">
+      {% if engineers %}
+      <button type="submit" class="btn btn-gold fw-bold">
+        <i class="fas fa-share-nodes me-1"></i> Save Distribution &amp; Notify Engineers
+      </button>
+      {% endif %}
+      <a href="{{ url_for('inventory_batch_view', batch_id=batch_id) }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+.bg-gold-soft { background:#fff8e7; }
+</style>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% set raw_score = score if score is defined and score is not none else 100 %}
+{% set component_score = raw_score|int %}
+{% set component_status = status if status is defined and status else 'green' %}
+{% set component_summary = summary if summary is defined and summary else 'All systems healthy.' %}
+{% set component_colors = {'green': '#16A34A', 'amber': '#F59E0B', 'red': '#DC2626'} %}
+{% set component_color = color if color is defined and color else component_colors.get(component_status, '#16A34A') %}
+{% set dashoffset = 283 - ((component_score / 100) * 283) %}
+<div class="health-score-circle health-{{ component_status }} {{ 'health-score-circle--compact' if compact|default(false) else '' }}" data-health-score-root>
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Project health score {{ component_score }}">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border, #E5E7EB)" stroke-width="8"/>
+        <circle class="progress-arc health-progress-arc"
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="{{ component_color }}"
+                stroke-width="8"
+                stroke-dasharray="283"
+                stroke-dashoffset="{{ '%.2f'|format(dashoffset) }}"
+                stroke-linecap="round"
+                transform="rotate(-90 50 50)"
+                data-health-arc/>
+        <text x="50"
+              y="50"
+              text-anchor="middle"
+              dominant-baseline="central"
+              fill="{{ component_color }}"
+              font-size="22"
+              font-weight="700"
+              data-health-score-value>{{ component_score }}</text>
+    </svg>
+    <p class="health-label">Health Score</p>
+    {% if show_summary|default(true) %}
+    <p class="health-summary" data-health-summary>{{ component_summary }}</p>
+    {% endif %}
+</div>

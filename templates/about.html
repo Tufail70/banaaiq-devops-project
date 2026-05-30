@@ -1,0 +1,94 @@
+﻿{% extends "base.html" %}
+{% block title %}About | BanaaIQ{% endblock %}
+{% block content %}
+<section class="inner-hero py-5">
+    <div class="container py-4">
+        <h1 class="fw-bold">{{ 'من نحن' if is_arabic else "Built for project controls, site delivery, and executive visibility." }}</h1>
+        <p class="lead">{{ 'نحن نبني الأدوات الرقمية التي يحتاجها قادة البناء في المملكة العربية السعودية لإدارة مشاريعهم بكفاءة أعلى' if is_arabic else 'BanaaIQ gives owners, consultants, and contractors one bilingual operating layer for daily reporting, task coordination, quantity control, and material risk management.' }}</p>
+    </div>
+</section>
+
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="content-card p-4 h-100">
+                    <h4>{{ 'ما الذي تقدمه المنصة' if is_arabic else 'What The Platform Delivers' }}</h4>
+                    <p>{{ 'توحد المنصة تقارير التقدم اليومي، وتتبع المخزون، وإدارة المهام، ومخرجات الذكاء الاصطناعي في مساحة عمل واحدة حتى تعمل فرق المكتب والموقع على نفس الحقيقة التشغيلية.' if is_arabic else 'The platform unifies DPRs, inventory tracking, task execution, and AI-assisted reporting in one workspace so site teams, project controls, and leadership all work from the same operational picture.' }}</p>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="content-card p-4 h-100">
+                    <h4>{{ 'الفائدة الأساسية' if is_arabic else 'Core Benefits' }}</h4>
+                    <p>{{ 'تساعد BanaaIQ الفرق على تقليل زمن إعداد التقارير، رصد نقص المواد قبل أن يسبب توقفاً، عزل بيانات كل مشروع بدقة، وتسريع القرارات عبر لوحات واضحة ثنائية اللغة وقابلة للتصدير.' if is_arabic else 'BanaaIQ helps teams shorten reporting cycles, catch material shortages before they stop production, keep each project data set isolated, and accelerate decisions with bilingual dashboards that are easy to review and export.' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="highlight-card p-4 h-100">
+                    <h5>{{ 'وضوح تنفيذي يومي' if is_arabic else 'Daily Executive Visibility' }}</h5>
+                    <p>{{ 'تجميع التقدم، التأخيرات، والمخاطر الحرجة في عرض واحد يسهل مراجعته من الإدارة العليا.' if is_arabic else 'Consolidates progress, delays, and critical risks into one view that leadership can review in minutes.' }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="highlight-card p-4 h-100">
+                    <h5>{{ 'سيطرة أفضل على المواد' if is_arabic else 'Tighter Material Control' }}</h5>
+                    <p>{{ 'ينبه الفرق فوراً عند اقتراب المخزون من الحد الأدنى حتى يتحرك الشراء قبل حدوث تعطل في الموقع.' if is_arabic else 'Surfaces stock risk early so procurement can act before shortages hit productivity on site.' }}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="highlight-card p-4 h-100">
+                    <h5>{{ 'تنسيق ثنائي اللغة' if is_arabic else 'Bilingual Team Alignment' }}</h5>
+                    <p>{{ 'يبقي التواصل بين الفرق العربية والإنجليزية متسقاً في المهام والتقارير والمراسلات التشغيلية.' if is_arabic else 'Keeps Arabic-English coordination consistent across tasks, reports, and field communications.' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-5">
+    <div class="container">
+        <h2 class="fw-bold mb-4">{{ 'كيف تنضج المنصة مع المشروع' if is_arabic else 'How The Platform Supports Delivery' }}</h2>
+        <div class="timeline">
+            <div class="timeline-item">
+                <span class="timeline-year">1</span>
+                <p>{{ 'بدء المشروع عبر إنشاء هيكل المشروع وتحديد المناطق وفرق العمل.' if is_arabic else 'Launch the workspace with project setup, zones, and package ownership.' }}</p>
+            </div>
+            <div class="timeline-item">
+                <span class="timeline-year">2</span>
+                <p>{{ 'إدارة التقارير اليومية والمهام والمخزون من نفس اللوحة دون ازدواجية بيانات.' if is_arabic else 'Run daily reporting, task execution, and inventory control from the same operating dashboard.' }}</p>
+            </div>
+            <div class="timeline-item">
+                <span class="timeline-year">3</span>
+                <p>{{ 'تحويل البيانات التشغيلية إلى مخرجات قابلة للتصدير لاجتماعات المتابعة والاعتمادات.' if is_arabic else 'Turn live operational data into export-ready outputs for review meetings and approvals.' }}</p>
+            </div>
+            <div class="timeline-item">
+                <span class="timeline-year">4</span>
+                <p>{{ 'رفع موثوقية القرارات عبر تنبيهات لحظية وسجل مشروع منظم وقابل للتتبع.' if is_arabic else 'Improve decision confidence with real-time alerts and a traceable project record.' }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-5">
+    <div class="container">
+        <div class="content-card p-4 text-center">
+            <h4>{{ 'تواصل مع فريق بناء IQ' if is_arabic else 'Talk to the BanaaIQ Team' }}</h4>
+            <p class="mb-2">{{ 'للاستفسارات والشراكات والعروض التوضيحية، راسلنا مباشرة.' if is_arabic else 'For enquiries, partnerships, and product demos, email us directly.' }}</p>
+            <a href="mailto:iqbaana@gmail.com" class="btn btn-outline-gold">
+                <i class="fa-solid fa-envelope me-2"></i>
+                iqbaana@gmail.com
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/reveal.js') }}"></script>
+{% endblock %}

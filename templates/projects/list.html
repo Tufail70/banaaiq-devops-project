@@ -1,0 +1,138 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% from "_macros/bilingual.html" import page_title %}
+{% block title %}My Projects | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+
+    {# ── Page header ── #}
+    {% call page_title('Projects', 'المشاريع',
+        sub='Project DNA workspaces for DPRs, BOQs, tasks, inventory, and packages.') %}
+        {% if current_user.role == 'project_manager' %}
+        <a class="bq-btn bq-btn--primary" href="{{ url_for('projects_create') }}">
+            <i class="fa fa-folder-plus" aria-hidden="true"></i> New Project
+        </a>
+        {% endif %}
+    {% endcall %}
+
+    {# ── Status tabs (underline style) ── #}
+    <div class="bq-tabs mb-4" role="tablist" aria-label="Filter projects by status">
+        {% for value, label in status_filters %}
+        <a class="bq-tab {{ 'active' if selected_status == value else '' }}"
+           href="{{ url_for('projects_list', status=value) }}"
+           role="tab" aria-selected="{{ 'true' if selected_status == value else 'false' }}">
+            {{ label }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if not project_cards %}
+    <div class="bq-empty">
+        <div class="bq-empty__icon"><i class="fa fa-building" aria-hidden="true"></i></div>
+        <h2 class="bq-empty__title">No projects yet</h2>
+        <p class="bq-empty__body">
+            Create your first Project DNA record to start connecting reports, quantities, tasks, and material data.
+        </p>
+        {% if current_user.role == 'project_manager' %}
+        <div class="bq-empty__cta">
+            <a class="bq-btn bq-btn--primary" href="{{ url_for('projects_create') }}">
+                <i class="fa fa-folder-plus" aria-hidden="true"></i> Create Project Workspace
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="row g-3">
+        {% for card in project_cards %}
+        {% set project = card.project %}
+        {% set health_score = project.health_score if project.health_score is not none else 100 %}
+        {% set health_status = project.health_status or 'green' %}
+        {% set health_colors = {'green': 'var(--bq-success)', 'amber': 'var(--bq-warning)', 'red': 'var(--bq-danger)'} %}
+        {% set health_color = health_colors.get(health_status, 'var(--bq-success)') %}
+        <div class="col-md-6 col-xl-4">
+            <div class="bq-card project-card-compact" style="display:flex;flex-direction:column;gap:var(--bq-s-3);">
+                <!-- Row 1: name + BIQ code pill + status pill -->
+                <div style="display:flex;align-items:flex-start;gap:var(--bq-s-2);flex-wrap:wrap;">
+                    <span class="bq-card__title" style="flex:1;min-width:0;font-size:var(--bq-fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ project.name }}">{{ project.name }}</span>
+                    <span class="bq-pill bq-pill--gold bq-mono">{{ project.project_code or 'BIQ-' }}</span>
+                    <span class="bq-pill pill-status-{{ project.status or 'active' }} {{ 'bq-pill--success' if (project.status or 'active') == 'active' else ('bq-pill--neutral' if (project.status or 'active') == 'completed' else 'bq-pill--warning') }}">
+                        {{ card.status_label }}
+                    </span>
+                </div>
+                <!-- Row 2: client · location · contract value -->
+                <div style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <i class="fa fa-building-user fa-fw" style="opacity:0.5;" aria-hidden="true"></i>
+                    {{ project.client_name or 'No client' }}
+                    {% if project.location_city %}
+                    <span aria-hidden="true">&middot;</span>
+                    <i class="fa fa-location-dot fa-fw" style="opacity:0.5;" aria-hidden="true"></i>
+                    {{ project.location_city }}
+                    {% endif %}
+                    <span aria-hidden="true">&middot;</span>
+                    <span class="bq-num" style="font-family:var(--bq-mono);font-weight:600;">SAR {{ "{:,.0f}".format(project.contract_value or 0) }}</span>
+                </div>
+                <!-- Row 3: date range + health -->
+                <div style="display:flex;align-items:center;gap:var(--bq-s-3);flex-wrap:wrap;">
+                    <i class="fa fa-calendar-range fa-fw" style="opacity:0.45;" aria-hidden="true"></i>
+                    <span style="font-size:var(--bq-fs-xs);font-family:var(--bq-mono);color:var(--bq-text-muted);">
+                        {{ project.start_date.strftime('%d %b %Y') if project.start_date else 'TBD' }}
+                        &rarr; {{ project.planned_completion.strftime('%d %b %Y') if project.planned_completion else 'TBD' }}
+                    </span>
+                    <svg class="project-card-compact__health-circle ms-auto" viewBox="0 0 40 40" aria-label="Health score {{ health_score }}" role="img">
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--bq-border)" stroke-width="4"/>
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="{{ health_color }}" stroke-width="4"
+                            stroke-dasharray="100.5"
+                            stroke-dashoffset="{{ 100.5 - (health_score / 100 * 100.5) | round(1) }}"
+                            stroke-linecap="round" transform="rotate(-90 20 20)"/>
+                        <text x="20" y="20" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="700" fill="{{ health_color }}">{{ health_score }}</text>
+                    </svg>
+                </div>
+                <!-- Row 4: labelled stat row (BOQs · TASKS · STOCK · DPRs) -->
+                <div style="display:flex;gap:var(--bq-s-5);border-top:1px solid var(--bq-border);padding-top:var(--bq-s-3);">
+                    <div style="text-align:center;">
+                        <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);">{{ boq_counts.get(project.id, 0) }}</div>
+                        <div class="bq-eyebrow" style="font-size:9px;">BOQs</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);">{{ task_counts.get(project.id, 0) }}</div>
+                        <div class="bq-eyebrow" style="font-size:9px;">Tasks</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);">{{ inv_counts.get(project.id, 0) }}</div>
+                        <div class="bq-eyebrow" style="font-size:9px;">Stock</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);">{{ dpr_counts.get(project.id, 0) }}</div>
+                        <div class="bq-eyebrow" style="font-size:9px;">DPRs</div>
+                    </div>
+                </div>
+                <!-- Row 5: actions -->
+                <div style="display:flex;gap:var(--bq-s-2);margin-top:var(--bq-s-1);">
+                    <a class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;"
+                       href="{{ url_for('project_workspace', id=project.id) if current_user.role == 'project_manager' else url_for('my_workspace_project', project_id=project.id) }}"
+                       aria-label="View project {{ project.name }}">
+                        <i class="fa fa-eye" aria-hidden="true"></i> View
+                    </a>
+                    {% if current_user.role == 'project_manager' %}
+                    <a class="bq-btn bq-btn--ghost bq-btn--sm"
+                       href="{{ url_for('project_edit', id=project.id) }}"
+                       aria-label="Edit project {{ project.name }}">
+                        <i class="fa fa-pen" aria-hidden="true"></i>
+                    </a>
+                    <form method="post" action="{{ url_for('project_delete', id=project.id) }}"
+                          onsubmit="return confirm('Delete this project workspace?');" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bq-btn bq-btn--ghost bq-btn--sm"
+                                style="color:var(--bq-danger);"
+                                aria-label="Delete project {{ project.name }}">
+                            <i class="fa fa-trash" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

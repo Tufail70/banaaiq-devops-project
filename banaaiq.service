@@ -1,0 +1,17 @@
+[Unit]
+Description=BanaaIQ Gunicorn Service
+After=network.target
+
+[Service]
+# Update the Linux user and paths below for the target EC2 host before enabling this unit.
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/banaaiq
+Environment="PATH=/home/ubuntu/banaaiq/.venv/bin"
+Environment="DATABASE_URL=postgresql://banaaiq_user:password@localhost/banaaiq_db"
+ExecStart=/home/ubuntu/banaaiq/.venv/bin/gunicorn -c gunicorn_config.py app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

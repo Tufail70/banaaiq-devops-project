@@ -1,0 +1,102 @@
+<div class="feature-header enterprise-feature-header">
+  <div class="mb-3">
+    <h4 class="feature-header-title">{{ page_title }}</h4>
+    <p class="feature-header-subtitle">{{ page_subtitle }}</p>
+  </div>
+
+  <div class="d-flex align-items-center flex-wrap gap-2 pb-3">
+    {% set header_projects = feature_projects|default(projects|default([])) %}
+    {% set header_selected = feature_selected_project|default(selected_project|default('all')) %}
+    {% set header_selected_name = selected_project_name|default('All Projects') %}
+    {% set header_feature = feature_project_type|default(active_dashboard|default('')) %}
+    <div class="dropdown">
+      <button class="btn btn-sm dropdown-toggle btn-feature-project d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa fa-building-columns text-secondary"></i>
+        <span id="selected-project-label">
+          {% if header_selected and header_selected != 'all' %}
+            {% set project_label = namespace(value='') %}
+            {% for p in header_projects %}
+              {% if p.id|string == header_selected|string %}
+                {% set project_label.value = p.name %}
+              {% endif %}
+            {% endfor %}
+            {{ (project_label.value or header_selected_name)[:20] }}{% if (project_label.value or header_selected_name)|length > 20 %}...{% endif %}
+          {% else %}
+            {{ header_selected_name }}
+          {% endif %}
+        </span>
+      </button>
+      <ul class="dropdown-menu feature-project-menu">
+        <li>
+          <a class="dropdown-item feature-project-option {% if not header_selected or header_selected == 'all' %}active{% endif %}" href="{{ base_url }}">
+            <i class="fa fa-layer-group me-2 text-secondary"></i>
+            All Projects
+          </a>
+        </li>
+
+        {% if header_projects %}
+        <li><hr class="dropdown-divider my-1"></li>
+        {% for proj in header_projects %}
+        <li class="d-flex align-items-center justify-content-between px-2 gap-1">
+          <a class="dropdown-item feature-project-option flex-grow-1 {% if header_selected|string == proj.id|string %}active{% endif %}" href="{{ base_url }}?project={{ proj.id }}">
+            <span class="project-color-dot" style="background: {{ proj.color or '#0B3C5D' }};"></span>
+            {{ proj.name[:26] }}{% if proj.name|length > 26 %}...{% endif %}
+          </a>
+          <button
+            class="btn btn-sm feature-project-remove p-1"
+            type="button"
+            onclick='event.preventDefault(); event.stopPropagation(); deleteFeatureProject({{ proj.id }}, {{ proj.name|tojson }});'
+            aria-label="Remove {{ proj.name }}"
+          >
+            <i class="fa fa-times"></i>
+          </button>
+        </li>
+        {% endfor %}
+        {% endif %}
+
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item feature-project-option fw-semibold" href="javascript:void(0)" onclick="event.preventDefault(); event.stopPropagation(); openAddProjectModal('{{ header_feature }}'); return false;">
+            <i class="fa fa-plus me-2"></i>
+            Add New Project
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <span class="feature-header-divider" aria-hidden="true"></span>
+
+    {% if primary_btn_label %}
+    <button type="button" onclick="{{ primary_btn_fn }}" class="btn btn-sm btn-gold d-flex align-items-center gap-2">
+      <i class="{{ primary_btn_icon }}"></i>
+      {{ primary_btn_label }}
+    </button>
+    {% endif %}
+
+    {% for btn in secondary_buttons|default([]) %}
+    <button type="button" onclick="{{ btn.fn }}" class="btn btn-sm btn-outline-gold d-flex align-items-center gap-2">
+      <i class="{{ btn.icon }}"></i>
+      {{ btn.label }}
+    </button>
+    {% endfor %}
+
+    {% if export_buttons %}
+    <div class="dropdown feature-header-export">
+      <button class="btn btn-sm btn-primary-enterprise dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa fa-download"></i>
+        Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end feature-project-menu">
+        {% for exp in export_buttons %}
+        <li>
+          <a class="dropdown-item feature-project-option" href="{{ exp.url }}" {% if exp.target %}target="{{ exp.target }}"{% endif %}>
+            <i class="{{ exp.icon }} me-2" style="color: {{ exp.color }};"></i>
+            {{ exp.label }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>

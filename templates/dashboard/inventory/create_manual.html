@@ -1,0 +1,260 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Create Inventory Manually | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+        <i class="fas fa-pen-to-square me-2" style="color:#F59E0B;"></i>
+        Create Inventory Manually / إنشاء مخزون يدوي
+      </h4>
+      <small class="text-muted">Add items one by one without AI generation.</small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form id="inv-form" method="POST" action="{{ url_for('inventory_create_manual') }}"
+        onsubmit="return buildAndSubmit(event)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="items_json" id="items_json">
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Project / المشروع <span class="text-danger">*</span></label>
+            <select name="project_id" class="form-select" required>
+              <option value="">— Select project —</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header py-3" style="background:#0B3C5D;color:#fff;">
+        <i class="fas fa-boxes-stacked me-2" style="color:#F59E0B;"></i>
+        Inventory Items / عناصر المخزون
+      </div>
+      <div class="card-body p-0" id="items-container">
+        {# First row inserted by page load JS #}
+      </div>
+      <datalist id="category-suggestions">
+        <option value="Cement & Concrete">
+        <option value="Steel & Rebar">
+        <option value="Electrical">
+        <option value="Plumbing">
+        <option value="HVAC">
+        <option value="Finishing & Tiling">
+        <option value="Paints">
+        <option value="Doors & Windows">
+        <option value="Tools">
+        <option value="Safety Equipment">
+        <option value="Consumables">
+        <option value="General">
+      </datalist>
+      <div class="px-3 py-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRow()">
+          <i class="fas fa-plus me-1"></i> Add Item / إضافة عنصر
+        </button>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn fw-semibold btn-gold">
+        <i class="fas fa-save me-1"></i> Create Inventory / إنشاء المخزون
+      </button>
+      <a href="{{ url_for('inventory_index') }}" class="btn btn-outline-secondary">Cancel / إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+</style>
+
+<script>
+let rowCount = 0;
+
+function makeRow() {
+  rowCount++;
+  const r = rowCount;
+  const div = document.createElement('div');
+  div.className = 'item-row border-bottom p-3';
+  div.innerHTML = `
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label form-label-sm fw-semibold small">Name (EN) *</label>
+        <input class="form-control form-control-sm item-name" placeholder="Portland Cement" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm fw-semibold small">Name (AR)</label>
+        <input class="form-control form-control-sm item-name-ar" dir="rtl" placeholder="إسمنت بورتلاندي">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm fw-semibold small">Category</label>
+        <input class="form-control form-control-sm item-category" placeholder="Cement & Concrete" list="category-suggestions">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Unit</label>
+        <input class="form-control form-control-sm item-unit" placeholder="bag">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Stock</label>
+        <input class="form-control form-control-sm item-stock" type="number" step="0.001" min="0" value="0">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Threshold</label>
+        <input class="form-control form-control-sm item-threshold" type="number" step="0.001" min="0" value="0">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">SAR</label>
+        <input class="form-control form-control-sm item-value" type="number" step="0.01" min="0" value="0">
+      </div>
+      <div class="col-auto d-flex gap-1 align-items-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
+                data-bs-toggle="collapse" data-bs-target="#proc_r${r}"
+                title="Specification & Procurement">
+          <i class="fas fa-flask" style="font-size:11px;"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1" onclick="deleteRow(this)">
+          <i class="fas fa-trash" style="font-size:11px;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="collapse mt-2" id="proc_r${r}">
+      <div class="bg-light rounded p-3">
+        <div class="fw-semibold small mb-2" style="color:#0B3C5D;">
+          <i class="fas fa-flask me-1" style="color:#F59E0B;"></i>Specification &amp; Procurement
+        </div>
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Specification</label>
+            <input class="form-control form-control-sm item-specification" maxlength="2000"
+                   placeholder="Grade, standard, technical attributes (e.g. ASTM C150 Type V, 40 MPa)">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm small">Brand Suggestions (comma-separated)</label>
+            <input class="form-control form-control-sm item-brands" maxlength="500"
+                   placeholder="Saudi Cement Co., Yamama Cement, or equivalent">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm small">Supplier Hint</label>
+            <input class="form-control form-control-sm item-supplier" maxlength="100"
+                   placeholder="Saudi Cement Company — Riyadh region">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Storage Requirements</label>
+            <input class="form-control form-control-sm item-storage" maxlength="1000"
+                   placeholder="Indoor dry storage. Stack max 10 bags. Avoid moisture.">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Lead Time (days)</label>
+            <input class="form-control form-control-sm item-lead-time" type="number" min="0" placeholder="7">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Min Order Qty</label>
+            <input class="form-control form-control-sm item-moq" type="number" step="0.01" min="0" placeholder="50">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Min Order Unit</label>
+            <input class="form-control form-control-sm item-mou" maxlength="50" placeholder="bags (1 pallet)">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Shelf Life (days)</label>
+            <input class="form-control form-control-sm item-shelf-days" type="number" min="0" placeholder="90">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm small">Shelf Life Note</label>
+            <input class="form-control form-control-sm item-shelf-note" maxlength="500"
+                   placeholder="From manufacture date on bag. Test if older than 90 days.">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Safety Notes</label>
+            <input class="form-control form-control-sm item-safety" maxlength="1000"
+                   placeholder="PPE: N95 mask, goggles, gloves. Alkaline irritant.">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Notes</label>
+            <input class="form-control form-control-sm item-notes" maxlength="500" placeholder="Additional notes">
+          </div>
+        </div>
+      </div>
+    </div>`;
+  return div;
+}
+
+function deleteRow(btn) {
+  const container = document.getElementById('items-container');
+  if (container.querySelectorAll('.item-row').length <= 1) {
+    alert('At least one item is required.');
+    return;
+  }
+  btn.closest('.item-row').remove();
+}
+
+function addRow() {
+  document.getElementById('items-container').appendChild(makeRow());
+}
+
+function buildAndSubmit(e) {
+  const items = [];
+  document.querySelectorAll('#items-container .item-row').forEach(row => {
+    const name = row.querySelector('.item-name').value.trim();
+    if (!name) return;
+    const brandsRaw = row.querySelector('.item-brands').value.trim();
+    const brands = brandsRaw ? brandsRaw.split(',').map(s => s.trim()).filter(Boolean) : null;
+    const leadTime = parseInt(row.querySelector('.item-lead-time').value) || null;
+    const moq = parseFloat(row.querySelector('.item-moq').value) || null;
+    const shelfDays = parseInt(row.querySelector('.item-shelf-days').value) || null;
+    items.push({
+      name,
+      name_ar: row.querySelector('.item-name-ar').value.trim(),
+      category: row.querySelector('.item-category').value.trim() || 'General',
+      unit: row.querySelector('.item-unit').value.trim() || 'pcs',
+      stock: parseFloat(row.querySelector('.item-stock').value) || 0,
+      threshold: parseFloat(row.querySelector('.item-threshold').value) || 0,
+      value_sar: parseFloat(row.querySelector('.item-value').value) || 0,
+      supplier: row.querySelector('.item-supplier').value.trim(),
+      notes: row.querySelector('.item-notes').value.trim(),
+      specification: row.querySelector('.item-specification').value.trim() || null,
+      brand_suggestions: brands,
+      storage_requirements: row.querySelector('.item-storage').value.trim() || null,
+      reorder_lead_time_days: leadTime,
+      min_order_qty: moq,
+      min_order_unit: row.querySelector('.item-mou').value.trim() || null,
+      safety_notes: row.querySelector('.item-safety').value.trim() || null,
+      shelf_life_days: shelfDays,
+      shelf_life_note: row.querySelector('.item-shelf-note').value.trim() || null,
+    });
+  });
+  if (!items.length) {
+    e.preventDefault();
+    alert('Please add at least one item with a name.');
+    return false;
+  }
+  document.getElementById('items_json').value = JSON.stringify(items);
+  return true;
+}
+
+// Add first row on load
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('items-container').appendChild(makeRow());
+});
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Your BanaaIQ invoice ' ~ (invoice.invoice_number or '') %}
+{% block content %}
+<h1>Invoice {{ invoice.invoice_number or '' }}</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>Thank you for your payment. Here's a summary of your latest invoice.</p>
+
+<table style="width:100%;margin:20px 0;border-collapse:collapse;">
+  <tr>
+    <td style="padding:8px 0;color:rgba(10,10,10,0.65);font-size:14px;">Plan</td>
+    <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:600;">
+      {{ invoice.subscription.plan.display_name if invoice.subscription and invoice.subscription.plan else 'BanaaIQ Plan' }}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:rgba(10,10,10,0.65);font-size:14px;">Period</td>
+    <td style="padding:8px 0;text-align:right;font-size:14px;">
+      {{ invoice.period_start.strftime('%d %b %Y') if invoice.period_start else '—' }}
+      –
+      {{ invoice.period_end.strftime('%d %b %Y') if invoice.period_end else '—' }}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:rgba(10,10,10,0.65);font-size:14px;">Subtotal</td>
+    <td style="padding:8px 0;text-align:right;font-size:14px;">
+      SAR {{ "{:,.2f}".format(invoice.subtotal or 0) }}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:rgba(10,10,10,0.65);font-size:14px;">VAT (15%)</td>
+    <td style="padding:8px 0;text-align:right;font-size:14px;">
+      SAR {{ "{:,.2f}".format(invoice.vat_amount or 0) }}
+    </td>
+  </tr>
+  <tr style="border-top:2px solid rgba(10,10,10,0.10);">
+    <td style="padding:12px 0 8px;font-weight:700;font-size:16px;">Total</td>
+    <td style="padding:12px 0 8px;text-align:right;font-weight:700;font-size:16px;color:#c8a730;">
+      SAR {{ "{:,.2f}".format(invoice.total_amount or 0) }}
+    </td>
+  </tr>
+</table>
+
+<div class="cta-wrap">
+  <a class="btn" href="{{ url_for('billing', _external=True) }}">View billing history</a>
+</div>
+
+<p class="muted">Invoice #{{ invoice.invoice_number or '—' }} · Status:
+   <strong>{{ invoice.status or 'paid' }}</strong></p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>فاتورة BanaaIQ</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>شكراً لدفعتك. يمكنك عرض الفاتورة الكاملة في لوحة الفوترة.</p>
+</div>
+{% endblock %}

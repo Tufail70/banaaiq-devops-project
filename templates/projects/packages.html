@@ -1,0 +1,103 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}Packages | {{ project.name }}{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+    <div class="project-page-head">
+        <div>
+            <span class="project-code-badge">{{ project.project_code }}</span>
+            <h3 class="mt-2 mb-1">Engineer Packages</h3>
+            <p class="text-muted mb-0">{{ project.name }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-gold" href="{{ url_for('project_workspace', id=project.id) }}"><i class="fa fa-arrow-left me-2"></i>Workspace</a>
+            <button class="btn btn-gold" type="button" data-bs-toggle="modal" data-bs-target="#assignPackageModal"><i class="fa fa-user-plus me-2"></i>Assign Package</button>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Engineer</th><th>Trade</th><th>BOQ</th><th>Package Value</th><th>Completion</th><th>Status</th><th>Workspace</th></tr></thead>
+                <tbody>
+                {% for package in packages %}
+                <tr>
+                    <td>{{ package.assigned_engineer_name }}</td>
+                    <td>{{ package.trade or '-' }}</td>
+                    <td>{{ package.boq.title if package.boq else '-' }}</td>
+                    <td>&#65020; {{ "{:,.2f}".format(package.package_value or 0) }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress project-progress flex-grow-1"><div class="progress-bar" style="width: {{ package.completion_percentage or 0 }}%"></div></div>
+                            <span class="small">{{ "{:.0f}".format(package.completion_percentage or 0) }}%</span>
+                        </div>
+                    </td>
+                    <td><span class="project-status-badge status-{{ package.status }}">{{ package.status|replace('_', ' ')|title }}</span></td>
+                    <td><a href="{{ url_for('engineer_package_workspace', package_id=package.id) }}">Open</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-muted">No engineer packages assigned yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignPackageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" action="{{ url_for('project_package_assign', id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Package</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Engineer name</label>
+                    <input class="form-control" name="engineer_name" list="package-users" required>
+                    <datalist id="package-users">
+                        {% for user in users %}
+                        <option value="{{ user.full_name }}">{{ user.email }}</option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Engineer email</label>
+                    <input class="form-control" name="engineer_email" type="email">
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Trade</label>
+                        <select class="form-select" name="trade">
+                            {% for trade in trade_options %}
+                            <option value="{{ trade }}">{{ trade }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Package Value</label>
+                        <div class="input-group"><span class="input-group-text">&#65020;</span><input class="form-control" name="package_value" inputmode="decimal"></div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">BOQ</label>
+                    <select class="form-select" name="boq_id">
+                        <option value="">No BOQ selected</option>
+                        {% for boq in boqs %}
+                        <option value="{{ boq.id }}">{{ boq.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Scope description</label>
+                    <textarea class="form-control" name="scope_description" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-gold">Assign Package</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}Oversight: {{ project.name }} | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="oversight-page">
+
+  {# ── Hero ─────────────────────────────────────────────────────────────── #}
+  <div class="oversight-hero content-card mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <span class="badge bg-navy text-gold fw-bold fs-6 mb-1">{{ project.project_code or 'BIQ-PENDING' }}</span>
+        <h3 class="mb-0 mt-1">{{ project.name }}</h3>
+        <p class="text-muted mb-0">{{ project.client_name or 'Client not set' }} · {{ project.location_city or 'Location TBD' }}</p>
+      </div>
+      <div class="oversight-health-wrap" id="project-health-card"
+           data-health-url="{{ url_for('api_project_health', id=project.id) }}"
+           data-recalculate-url="{{ url_for('project_recalculate_health', id=project.id) }}">
+        {% set score = health.score if health else (project.health_score or 100) %}
+        {% set status = health.status if health else (project.health_status or 'green') %}
+        {% set summary = health.summary if health else (project.health_summary or 'All systems healthy.') %}
+        {% include "components/health_score.html" %}
+        <small class="text-muted d-block text-center mt-1" data-health-last>
+          {% if health and health.last_calculated %}Last calculated {{ health.last_calculated[:16].replace('T',' ') }}{% endif %}
+        </small>
+        <div class="text-center mt-2">
+          <button id="recalculate-health-btn" class="btn btn-outline-navy btn-sm">
+            <i class="fa fa-rotate me-1"></i>Refresh / تحديث
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="text-end mt-2">
+      <a href="{{ url_for('project_workspace', id=project.id) }}" class="btn btn-navy btn-sm">
+        <i class="fa fa-arrow-left me-1"></i>Back to Workspace / العودة
+      </a>
+    </div>
+  </div>
+
+  {# ── Summary stat cards ───────────────────────────────────────────────── #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="content-card text-center p-3">
+        <div class="fs-1 fw-bold text-navy">{{ "%.0f"|format(project_summary.boq_completion_pct) }}%</div>
+        <small class="text-muted">BOQ Completion / إتمام الكميات</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="content-card text-center p-3">
+        <div class="fs-4 fw-bold text-gold">&#65020;{{ "{:,.0f}".format(project_summary.spend_sar) }}</div>
+        <small class="text-muted">Spend / المنصرف (of &#65020;{{ "{:,.0f}".format(project_summary.budget_sar) }})</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="content-card text-center p-3">
+        <div class="fs-1 fw-bold text-navy">{{ project_summary.active_tasks_count }}</div>
+        <small class="text-muted">Active Tasks / المهام النشطة</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="content-card text-center p-3 {% if project_summary.alerts_count > 0 %}border-danger{% endif %}">
+        <div class="fs-1 fw-bold {% if project_summary.alerts_count > 0 %}text-danger{% else %}text-success{% endif %}">
+          {{ project_summary.alerts_count }}
+        </div>
+        <small class="text-muted">Alerts / التنبيهات</small>
+      </div>
+    </div>
+  </div>
+
+  {# ── Engineers grid ───────────────────────────────────────────────────── #}
+  <div class="content-card mb-4">
+    <h5 class="mb-3">
+      <i class="fa fa-hard-hat me-2 text-gold"></i>
+      Engineer Performance / أداء المهندسين
+    </h5>
+    {% if engineer_cards %}
+    <div class="row g-3">
+      {% for card in engineer_cards %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="border rounded p-3 h-100">
+          <div class="d-flex align-items-center mb-2">
+            <div class="engineer-avatar me-2">{{ card.name[:2].upper() }}</div>
+            <div>
+              <div class="fw-bold">{{ card.name }}</div>
+              <small class="text-muted">{{ card.role_on_project }}</small>
+            </div>
+          </div>
+          <div class="mb-2">
+            <div class="d-flex justify-content-between mb-1">
+              <small>Progress / التقدم</small>
+              <small class="fw-bold">{{ card.progress_pct }}%</small>
+            </div>
+            <div class="progress" style="height:8px">
+              <div class="progress-bar bg-gold" style="width:{{ card.progress_pct }}%"></div>
+            </div>
+          </div>
+          <div class="row text-center g-1 mt-1">
+            <div class="col-4">
+              <div class="fw-bold text-navy">{{ card.tasks_done }}</div>
+              <small class="text-muted">Done</small>
+            </div>
+            <div class="col-4">
+              <div class="fw-bold">{{ card.tasks_open }}</div>
+              <small class="text-muted">Open</small>
+            </div>
+            <div class="col-4">
+              <div class="fw-bold text-muted">{{ card.last_dpr_date }}</div>
+              <small class="text-muted">Last DPR</small>
+            </div>
+          </div>
+          {% if card.materials_status.critical or card.materials_status.low %}
+          <div class="mt-2">
+            {% if card.materials_status.critical %}
+            <span class="badge bg-danger me-1">{{ card.materials_status.critical }} Critical</span>
+            {% endif %}
+            {% if card.materials_status.low %}
+            <span class="badge bg-warning text-dark">{{ card.materials_status.low }} Low</span>
+            {% endif %}
+          </div>
+          {% endif %}
+          <div class="mt-2">
+            <small class="text-muted"><i class="fa fa-envelope me-1"></i>{{ card.email }}</small>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No engineers assigned to this project yet. / لم يتم تعيين مهندسين بعد.</p>
+    {% endif %}
+  </div>
+
+  {# ── Activity feed ────────────────────────────────────────────────────── #}
+  <div class="content-card" id="activity-feed-panel">
+    <h5 class="mb-3">
+      <i class="fa fa-timeline me-2 text-gold"></i>
+      Activity Feed / سجل النشاط
+    </h5>
+    <div style="max-height:420px;overflow-y:auto;">
+      {% if activity_feed %}
+      {% for item in activity_feed %}
+      <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
+        <div class="me-3 mt-1">
+          {% if item.type == 'dpr' %}
+          <i class="fa fa-file-lines text-navy fs-5"></i>
+          {% elif item.type == 'task' %}
+          <i class="fa fa-check-square text-success fs-5"></i>
+          {% elif item.type == 'package' %}
+          <i class="fa fa-layer-group text-gold fs-5"></i>
+          {% else %}
+          <i class="fa fa-box text-warning fs-5"></i>
+          {% endif %}
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold">{{ item.actor_name }}</div>
+          <div class="text-muted">{{ item.message }}</div>
+          <small class="text-muted opacity-75">{{ item.timestamp.strftime('%d %b %Y %H:%M') if item.timestamp else '—' }}</small>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="text-muted mb-0">No activity recorded yet. / لا يوجد نشاط مسجل.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<style>
+.oversight-hero { background: linear-gradient(135deg, #0B3C5D 0%, #15325f 100%); color: #fff; }
+.oversight-hero h3, .oversight-hero .text-muted { color: rgba(255,255,255,0.85) !important; }
+.oversight-hero .badge { background: rgba(245,158,11,0.15) !important; }
+.bg-navy { background: #0B3C5D; }
+.text-navy { color: #0B3C5D !important; }
+.text-gold { color: #F59E0B !important; }
+.bg-gold { background: #F59E0B; }
+.btn-navy { background: #0B3C5D; color: #fff; border-color: #0B3C5D; }
+.btn-outline-navy { border-color: rgba(255,255,255,0.4); color: #fff; }
+.btn-outline-navy:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.engineer-avatar { width:36px; height:36px; border-radius:50%; background:#F59E0B; color:#0B3C5D; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+</style>
+
+<script>
+/* Auto-poll health every 60s */
+(function() {
+  const card = document.getElementById('project-health-card');
+  if (!card) return;
+  const healthUrl = card.dataset.healthUrl;
+  const recalculateUrl = card.dataset.recalculateUrl;
+  const circumference = 283;
+  const statusColors = { green: '#28a745', amber: '#ffc107', red: '#dc3545' };
+
+  function updateHealthUI(data) {
+    if (!data) return;
+    const score = Math.max(0, Math.min(100, Math.round(Number(data.score) || 0)));
+    const status = ['green','amber','red'].includes(data.status) ? data.status : 'green';
+    const color = statusColors[status];
+    const circle = card.querySelector('[data-health-score-root]');
+    const arc = card.querySelector('[data-health-arc]');
+    const text = card.querySelector('[data-health-score-value]');
+    const summary = card.querySelector('[data-health-summary]');
+    const last = card.querySelector('[data-health-last]');
+    if (circle) { circle.className = circle.className.replace(/health-\w+/g, ''); circle.classList.add('health-' + status); }
+    if (arc) { arc.setAttribute('stroke', color); arc.setAttribute('stroke-dashoffset', (circumference - (score/100)*circumference).toFixed(2)); }
+    if (text) { text.textContent = score; text.setAttribute('fill', color); }
+    if (summary) summary.textContent = data.summary || 'All systems healthy.';
+    if (last && data.last_calculated) last.textContent = 'Last calculated ' + data.last_calculated.substring(0,16).replace('T',' ');
+  }
+
+  async function refreshHealth() {
+    if (!healthUrl) return;
+    try {
+      const r = await fetch(healthUrl);
+      if (r.ok) { const d = await r.json(); updateHealthUI(d); }
+    } catch(_) {}
+  }
+
+  const btn = document.getElementById('recalculate-health-btn');
+  if (btn) {
+    btn.addEventListener('click', async function() {
+      btn.disabled = true;
+      try {
+        const r = await fetch(recalculateUrl, { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || '' } });
+        if (r.ok) { const d = await r.json(); updateHealthUI(d); }
+      } catch(_) {}
+      btn.disabled = false;
+    });
+  }
+
+  refreshHealth();
+  window.setInterval(refreshHealth, 60000);
+})();
+</script>
+{% endblock %}

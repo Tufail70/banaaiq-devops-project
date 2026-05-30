@@ -1,0 +1,182 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}Engineer Workspace | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+    {% if not package %}
+    <div class="content-card project-empty-state">
+        <div class="project-empty-icon"><i class="fa fa-user-hard-hat"></i></div>
+        <h4>No package assigned yet</h4>
+        <p class="text-muted mb-0">Your engineer workspace will appear here after a project manager assigns a package to your account.</p>
+    </div>
+    {% else %}
+    {% set can_update = package.assigned_user_id == current_user.id %}
+    <div class="engineer-workspace-shell">
+        <div class="engineer-workspace-main">
+            <div class="project-workspace-hero">
+                <div>
+                    <span class="project-code-badge">{{ package.project.project_code if package.project else '' }}</span>
+                    <h3 class="mt-2 mb-1">{{ package.trade }} Package - {{ package.project.name if package.project else 'Project' }}</h3>
+                    <p class="mb-0">{{ package.scope_description or 'Scope description not provided yet.' }}</p>
+                </div>
+                <div class="project-hero-actions">
+                    <span class="project-value-badge">&#65020; {{ "{:,.2f}".format(package.package_value or 0) }} scope</span>
+                    <span class="project-status-badge status-{{ package.status }}">{{ package.status|replace('_', ' ')|title }}</span>
+                </div>
+            </div>
+
+            {% if packages|length > 1 %}
+            <div class="content-card p-3 mb-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <strong class="me-2">My packages</strong>
+                    {% for pkg in packages %}
+                    <a class="project-filter-pill {{ 'active' if pkg.id == package.id else '' }}" href="{{ url_for('engineer_package_workspace', package_id=pkg.id) }}">
+                        {{ pkg.trade }} · {{ pkg.project.name if pkg.project else 'Project' }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <ul class="nav nav-tabs project-tabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#my-boq" type="button">My BOQ Package</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#my-tasks" type="button">My Tasks</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#my-materials" type="button">My Materials</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#my-dprs" type="button">My DPRs</button></li>
+            </ul>
+
+            <div class="tab-content pt-3">
+                <div class="tab-pane fade show active" id="my-boq">
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead><tr><th>Description</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Total</th><th>Status</th><th>Update</th></tr></thead>
+                                <tbody>
+                                {% for item in workspace['items'] %}
+                                <tr>
+                                    <td>{{ item.description or '-' }}</td>
+                                    <td>{{ item.unit or '-' }}</td>
+                                    <td>{{ "{:,.3f}".format(item.quantity) }}</td>
+                                    <td>&#65020; {{ "{:,.2f}".format(item.rate) }}</td>
+                                    <td>&#65020; {{ "{:,.2f}".format(item.total) }}</td>
+                                    <td><span class="project-status-badge status-{{ item.status }}">{{ item.status_label }}</span></td>
+                                    <td>
+                                        {% if can_update %}
+                                        <div class="d-flex gap-1 flex-wrap">
+                                            <form method="post" action="{{ url_for('engineer_package_item_status', package_id=package.id, item_index=item.index) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="in_progress">
+                                                <button class="btn btn-sm btn-outline-gold" type="submit">In Progress</button>
+                                            </form>
+                                            <form method="post" action="{{ url_for('engineer_package_item_status', package_id=package.id, item_index=item.index) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="status" value="complete">
+                                                <button class="btn btn-sm btn-gold" type="submit">Complete</button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted small">View only</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="7" class="text-muted">No BOQ items are linked to this package yet.</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="my-tasks">
+                    <div class="project-kanban">
+                        {% for status_key, label in task_status_labels.items() %}
+                        <div class="content-card project-kanban-column">
+                            <div class="project-kanban-head"><strong>{{ label }}</strong><span>{{ workspace.kanban[status_key]|length }}</span></div>
+                            {% for task in workspace.kanban[status_key] %}
+                            <div class="project-task-mini">
+                                <strong>{{ task.name }}</strong>
+                                <small>{{ task.due_date.strftime('%d %b') if task.due_date else 'No due date' }} · {{ task.priority|title }}</small>
+                                {% if can_update %}
+                                <form class="mt-2" method="post" action="{{ url_for('engineer_workspace_task_status', package_id=package.id, task_id=task.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <select class="form-select form-select-sm" name="status" onchange="this.form.submit()">
+                                        {% for key, status_label in task_status_labels.items() %}
+                                        <option value="{{ key }}" {{ 'selected' if key == task.status else '' }}>{{ status_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted small mb-0">No tasks assigned to you for this project.</p>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="my-materials">
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead><tr><th>Item</th><th>Category</th><th>Stock</th><th>Threshold</th><th>Status</th><th>Value</th></tr></thead>
+                                <tbody>
+                                {% for item in workspace.materials %}
+                                <tr class="{{ 'table-danger' if item.status == 'critical' else ('table-warning' if item.status == 'low' else '') }}">
+                                    <td>{{ item.name }}</td>
+                                    <td>{{ item.category or '-' }}</td>
+                                    <td>{{ item.stock }} {{ item.unit or '' }}</td>
+                                    <td>{{ item.threshold }} {{ item.unit or '' }}</td>
+                                    <td>{{ item.status|title }}</td>
+                                    <td>&#65020; {{ "{:,.2f}".format(item.value_sar or 0) }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="text-muted">No trade-relevant material items are linked yet.</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="my-dprs">
+                    <div class="content-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">My DPRs</h5>
+                            <a class="btn btn-gold btn-sm" href="{{ url_for('dashboard_dpr_new', project_id=package.project_id) }}">+ New DPR</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead><tr><th>Date</th><th>Zone</th><th>Weather</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                {% for dpr in workspace.dprs %}
+                                <tr>
+                                    <td>{{ dpr.date.strftime('%d %b %Y') if dpr.date else '-' }}</td>
+                                    <td>{{ dpr.zone or '-' }}</td>
+                                    <td>{{ dpr.weather or '-' }}</td>
+                                    <td>{{ dpr.status }}</td>
+                                    <td><a href="{{ url_for('dashboard_dpr_view', id=dpr.id) }}">View</a></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-muted">No DPRs submitted by you for this project yet.</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <aside class="content-card engineer-summary-card">
+            <div class="project-health-circle project-health-circle--large health-green">{{ "{:.0f}".format(package.completion_percentage or 0) }}%</div>
+            <h5 class="mb-3">Progress Summary</h5>
+            <div class="engineer-summary-row"><span>Completed items</span><strong>{{ workspace.summary.completed_items }}/{{ workspace.summary.total_items }}</strong></div>
+            <div class="engineer-summary-row"><span>Days remaining</span><strong>{{ workspace.summary.days_remaining if workspace.summary.days_remaining is not none else '-' }}</strong></div>
+            <div class="engineer-summary-row"><span>Overdue tasks</span><strong>{{ workspace.summary.overdue_tasks }}</strong></div>
+            <div class="engineer-summary-row"><span>Critical materials</span><strong>{{ workspace.summary.critical_items }}</strong></div>
+        </aside>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

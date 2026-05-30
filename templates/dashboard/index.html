@@ -1,0 +1,578 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+{% set intel = dashboard_intelligence|default({}) %}
+{% set total_tasks = stats.total_tasks|default(0)|int %}
+{% set backlog_total = stats.backlog_tasks|default(0)|int %}
+{% set critical_items = stats.critical_items|default(0)|int %}
+{% set low_stock_items = stats.low_stock_items|default(0)|int %}
+{% set progress_pct = intel.progress_pct|default(0)|int %}
+{% set health_avg = intel.health_avg|default(0)|int %}
+{% set projects_href = url_for('projects_list') if current_user.is_authenticated else url_for('auth_register') %}
+{% set dashboard_feature_cards = [
+    {
+        'title': 'Projects',
+        'description': 'Project DNA workspaces connecting reports, BOQs, tasks, inventory, and packages.',
+        'icon': 'fa-folder-open',
+        'href': projects_href,
+        'button': 'Open Projects'
+    },
+    {
+        'title': 'DPR',
+        'description': 'Daily progress reporting with bilingual summaries, workforce context, and exports.',
+        'icon': 'fa-clipboard-list',
+        'href': url_for('dashboard_dpr_index'),
+        'button': 'Open DPR'
+    },
+    {
+        'title': 'BOQ',
+        'description': 'Upload, revise, distribute, and audit quantities with AI-assisted checks.',
+        'icon': 'fa-calculator',
+        'href': url_for('dashboard_boq_index'),
+        'button': 'Open BOQ'
+    },
+    {
+        'title': 'Inventory',
+        'description': 'Track material availability, critical stock, requests, and site allocations.',
+        'icon': 'fa-boxes-stacked',
+        'href': url_for('inventory_index'),
+        'button': 'Open Inventory'
+    },
+    {
+        'title': 'Tasks',
+        'description': 'Coordinate site actions, priorities, assignees, and audit-ready updates.',
+        'icon': 'fa-list-check',
+        'href': url_for('dashboard_tasks'),
+        'button': 'Open Tasks'
+    },
+] %}
+{% if current_user.is_authenticated and current_user.role == 'site_engineer' %}
+{% set dashboard_feature_cards = dashboard_feature_cards + [
+    {
+        'title': 'Translator',
+        'description': 'Translate construction updates between English and Arabic for site coordination.',
+        'icon': 'fa-language',
+        'href': url_for('dashboard_translator'),
+        'button': 'Open Translator'
+    }
+] %}
+{% endif %}
+
+<section class="enterprise-dashboard bq-phase2" aria-label="BanaaIQ dashboard overview">
+<div class="bq-p2-layout">
+
+    <!-- ── Main content column ── -->
+    <div class="bq-p2-main">
+
+        <!-- Page head -->
+        <header class="bq-page-head" style="padding-top: 32px;">
+            <div>
+                <p class="bq-eyebrow mb-1" aria-label="Section context">
+                    <i class="fa-solid fa-helmet-safety" aria-hidden="true"></i>&ensp;Construction Command Center
+                </p>
+                <div class="bq-page-head__title">
+                    <span class="en bq-serif">{{ display_first_name|default(user_name.split(' ')[0] if user_name else 'Project') }} Workspace</span>
+                </div>
+                <p class="bq-page-head__sub">
+                    AI-assisted control for Saudi Arabia and India delivery teams: progress, workforce, safety, inventory, approvals, and project health.
+                </p>
+                <div class="hero-market-row mt-3" aria-label="Supported markets">
+                    <span class="market-chip"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Saudi Arabia</span>
+                    <span class="market-chip"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> India</span>
+                    <span class="signal-chip"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Enterprise-ready</span>
+                </div>
+            </div>
+            <div class="bq-page-head__actions">
+                <a href="{{ url_for('dashboard_dpr_new') }}" class="bq-btn bq-btn--primary bq-btn--sm">
+                    <i class="fa fa-file-circle-plus" aria-hidden="true"></i> New DPR
+                </a>
+                <a href="{{ projects_href }}" class="bq-btn bq-btn--secondary bq-btn--sm">
+                    <i class="fa fa-folder-open" aria-hidden="true"></i> Projects
+                </a>
+            </div>
+        </header>
+
+        <!-- ── KPI row — status group + divider + financial group ── -->
+        <div class="bq-kpi-row" aria-label="KPI cards">
+
+            <!-- Status group: Health · Progress · Manpower -->
+            <div class="bq-kpi-group">
+                <article class="bq-kpi">
+                    <div class="bq-kpi__accent" aria-hidden="true"></div>
+                    <div class="bq-kpi__label">Progress</div>
+                    <div class="bq-kpi__value counter bq-num" data-counter="{{ progress_pct }}">{{ progress_pct }}</div>
+                    <div class="bq-kpi__note">{{ stats.tasks_done|default(0) }}&thinsp;/&thinsp;{{ total_tasks }} tasks done</div>
+                </article>
+                <article class="bq-kpi">
+                    <div class="bq-kpi__accent" aria-hidden="true"></div>
+                    <div class="bq-kpi__label">Manpower</div>
+                    <div class="bq-kpi__value counter bq-num" data-counter="{{ intel.manpower_total|default(0) }}">{{ intel.manpower_total|default(0) }}</div>
+                    <div class="bq-kpi__note">{{ stats.dprs_this_month|default(0) }} DPRs this month</div>
+                </article>
+            </div>
+
+            <!-- Hairline divider -->
+            <div class="bq-kpi-divider" aria-hidden="true"></div>
+
+            <!-- Financial + safety group -->
+            <div class="bq-kpi-group">
+                <article class="bq-kpi {{ 'bq-kpi--danger' if critical_items else '' }}">
+                    <div class="bq-kpi__accent" style="{{ 'background: var(--bq-danger)' if critical_items else '' }}" aria-hidden="true"></div>
+                    <div class="bq-kpi__label">Safety Alerts</div>
+                    <div class="bq-kpi__value counter bq-num" data-counter="{{ intel.safety_alerts|default(0) }}">{{ intel.safety_alerts|default(0) }}</div>
+                    <div class="bq-kpi__note">{{ critical_items }} critical stock signals</div>
+                </article>
+                <article class="bq-kpi">
+                    <div class="bq-kpi__accent" aria-hidden="true"></div>
+                    <div class="bq-kpi__label">BOQ Value</div>
+                    <div class="bq-kpi__value bq-num" style="font-size: clamp(18px, 2.5vw, 30px);">
+                        <span class="unit">SAR</span>{{ "{:,.0f}".format(stats.boqs_total_value|default(0)) }}
+                    </div>
+                    <div class="bq-kpi__note">{{ stats.total_boqs|default(0) }} BOQ records</div>
+                </article>
+            </div>
+        </div>
+
+        <!-- ── Project Progress (redesigned) ── -->
+        <div class="bq-widget-row">
+            <article class="bq-card" style="flex: 1 1 340px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">Project Progress</h2>
+                        <p class="bq-card__sub">Task completion and execution readiness.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i></span>
+                </div>
+                <!-- Horizontal progress bar (replaces ring) -->
+                <div class="bq-progress-wrap mb-3">
+                    <div class="bq-progress-bar-track" role="progressbar" aria-valuenow="{{ progress_pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Overall task progress {{ progress_pct }}%">
+                        <div class="bq-progress-bar-fill" style="width: {{ progress_pct }}%;"></div>
+                    </div>
+                    <div class="bq-progress-pct bq-num">{{ progress_pct }}%</div>
+                </div>
+                <!-- 3-stat row -->
+                <div class="bq-stat-row">
+                    <div class="bq-stat-cell">
+                        <div class="bq-stat-value bq-num bq-serif">{{ total_tasks }}</div>
+                        <div class="bq-stat-label bq-eyebrow">Total</div>
+                    </div>
+                    <div class="bq-stat-cell">
+                        <div class="bq-stat-value bq-num bq-serif">{{ stats.tasks_in_progress|default(0) }}</div>
+                        <div class="bq-stat-label bq-eyebrow">In Progress</div>
+                    </div>
+                    <div class="bq-stat-cell">
+                        <div class="bq-stat-value bq-num bq-serif">{{ backlog_total }}</div>
+                        <div class="bq-stat-label bq-eyebrow">Backlog</div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- AI Insights — bq-card styling -->
+            <article class="bq-card bq-card--quiet" style="flex: 1 1 340px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">AI Insights</h2>
+                        <p class="bq-card__sub">Prioritized recommendations from operational signals.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
+                </div>
+                <div class="ai-insight-list">
+                    {% for insight in intel.ai_insights|default([]) %}
+                    <div class="insight-item">
+                        <i class="fa-solid {{ insight.icon }}" aria-hidden="true"></i>
+                        <div>
+                            <div class="insight-title">{{ insight.title }}</div>
+                            <div class="insight-text">{{ insight.body }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="insight-item">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <div>
+                            <div class="insight-title">Signals ready</div>
+                            <div class="insight-text">Operational signals are ready for review.</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+
+        <!-- ── Inventory + Approvals row ── -->
+        <div class="bq-widget-row">
+            <article class="bq-card" style="flex: 1 1 240px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">Equipment</h2>
+                        <p class="bq-card__sub">Material and equipment readiness.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-truck-ramp-box" aria-hidden="true"></i></span>
+                </div>
+                <div class="metric-list">
+                    <div class="metric-row"><span>Ready items</span><strong class="bq-num">{{ intel.equipment_ready|default(0) }}</strong></div>
+                    <div class="metric-row"><span>Low stock</span><strong class="bq-num">{{ low_stock_items }}</strong></div>
+                    <div class="metric-row"><span>Critical</span><strong class="bq-num">{{ critical_items }}</strong></div>
+                </div>
+            </article>
+
+            <article class="bq-card" style="flex: 1 1 240px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">Approvals</h2>
+                        <p class="bq-card__sub">Stock and package decisions awaiting action.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i></span>
+                </div>
+                <div class="metric-list">
+                    <div class="metric-row"><span>Pending stock</span><strong class="bq-num">{{ intel.pending_approvals|default(0) }}</strong></div>
+                    <div class="metric-row"><span>Active packages</span><strong class="bq-num">{{ intel.active_packages|default(0) }}</strong></div>
+                    <div class="metric-row"><span>Notifications</span><strong class="bq-num">{{ unread_count|default(0) }}</strong></div>
+                </div>
+            </article>
+
+            <article class="bq-card" style="flex: 1 1 240px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">Analytics</h2>
+                        <p class="bq-card__sub">Operational balance across modules.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></span>
+                </div>
+                <div class="mini-bars">
+                    <div class="mini-bar-row">
+                        <span class="mini-bar-label">DPRs</span>
+                        <span class="mini-bar-track"><span style="--bar-value: {{ [stats.total_dprs|default(0)|int * 12, 100]|min }}%;"></span></span>
+                        <span class="mini-bar-value bq-num">{{ stats.total_dprs|default(0) }}</span>
+                    </div>
+                    <div class="mini-bar-row">
+                        <span class="mini-bar-label">BOQs</span>
+                        <span class="mini-bar-track"><span style="--bar-value: {{ [stats.total_boqs|default(0)|int * 16, 100]|min }}%;"></span></span>
+                        <span class="mini-bar-value bq-num">{{ stats.total_boqs|default(0) }}</span>
+                    </div>
+                    <div class="mini-bar-row">
+                        <span class="mini-bar-label">Stock</span>
+                        <span class="mini-bar-track"><span style="--bar-value: {{ [stats.total_inventory_items|default(0)|int * 7, 100]|min }}%;"></span></span>
+                        <span class="mini-bar-value bq-num">{{ stats.total_inventory_items|default(0) }}</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- ── My Tasks ── -->
+        {% if my_tasks_widget %}
+        <article class="bq-card">
+            <div class="bq-card__head">
+                <div>
+                    <h2 class="bq-card__title">My Tasks</h2>
+                    <p class="bq-card__sub">Open tasks assigned to you <span class="bq-bil-sep" aria-hidden="true"></span> <span lang="ar" dir="rtl">مهامي المفتوحة</span></p>
+                </div>
+                <a href="{{ url_for('dashboard_tasks') }}" class="bq-btn bq-btn--ghost bq-btn--sm" title="View all tasks">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i> All tasks
+                </a>
+            </div>
+            <div class="metric-list">
+                {% for t in my_tasks_widget %}
+                <div class="metric-row" style="align-items:flex-start;gap:10px;">
+                    <a href="{{ url_for('task_detail', task_id=t.id) }}" class="text-decoration-none flex-fill" style="color: var(--bq-text);">
+                        <span style="font-size: var(--bq-fs-sm); font-weight: 500;">{{ t.name }}</span>
+                        <span style="color: var(--bq-text-muted); margin-inline-start: 8px; font-size: var(--bq-fs-xs);">{{ t.project_rel.name if t.project_rel else '' }}</span>
+                    </a>
+                    {% if t.due_date %}
+                    <span class="bq-pill {{ 'bq-pill--danger' if t.is_overdue else 'bq-pill--neutral' }}" style="font-size:10px;">
+                        {{ t.due_date.strftime('%d %b') }}
+                    </span>
+                    {% endif %}
+                    <span class="bq-pill {{ {'not_started':'bq-pill--neutral','in_progress':'bq-pill--warning','review':'bq-pill--gold','done':'bq-pill--success'}.get(t.status,'bq-pill--neutral') }}" style="font-size:10px;">
+                        {{ {'not_started':'Not Started','in_progress':'In Progress','review':'Review','done':'Done'}.get(t.status, t.status) }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+        {% endif %}
+
+        <!-- ── Timeline ── -->
+        <article class="bq-card">
+            <div class="bq-card__head">
+                <div>
+                    <h2 class="bq-card__title">Timeline Overview</h2>
+                    <p class="bq-card__sub">High-level project phase coverage.</p>
+                </div>
+                <span class="widget-icon"><i class="fa-solid fa-timeline" aria-hidden="true"></i></span>
+            </div>
+            <div class="mini-bars">
+                {% for item in intel.timeline|default([]) %}
+                <div class="mini-bar-row">
+                    <span class="mini-bar-label">{{ item.label }}</span>
+                    <span class="mini-bar-track"><span style="--bar-value: {{ item.value }}%;"></span></span>
+                    <span class="mini-bar-value bq-num">{{ item.value }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <!-- ── Recent DPRs ── -->
+        <article class="bq-card">
+            <div class="bq-card__head">
+                <div>
+                    <h2 class="bq-card__title">Recent DPRs</h2>
+                    <p class="bq-card__sub">Latest site reporting records.</p>
+                </div>
+                <a href="{{ url_for('dashboard_dpr_index') }}" class="bq-btn bq-btn--secondary bq-btn--sm">View all</a>
+            </div>
+            {% if recent_dprs %}
+            <div class="table-responsive">
+                <table class="bq-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Project</th>
+                            <th>Zone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dpr in recent_dprs[:5] %}
+                        {% set dpr_status = dpr.status if dpr.status is defined else dpr.get('status') %}
+                        <tr>
+                            <td class="bq-num">{{ dpr.date if dpr.date is defined else dpr.get('date') }}</td>
+                            <td>{{ dpr.project if dpr.project is defined else dpr.get('project') }}</td>
+                            <td>{{ dpr.zone if dpr.zone is defined else dpr.get('zone') }}</td>
+                            <td><span class="bq-pill {{ 'bq-pill--neutral' if dpr_status == 'Draft' else 'bq-pill--success' }}">{{ dpr_status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="color: var(--bq-text-muted); margin: 0;">No DPRs yet. Your first report will appear here.</p>
+            {% endif %}
+        </article>
+
+        <!-- ── Activity + Recommendations ── -->
+        <div class="bq-widget-row">
+            <article class="bq-card" style="flex: 1 1 300px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">Live Activity</h2>
+                        <p class="bq-card__sub">{{ stats.total_projects|default(0) }} active project records.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></span>
+                </div>
+                <div class="activity-feed-list">
+                    {% for activity in intel.activity_preview|default([]) %}
+                    <div class="activity-feed-item">
+                        <i class="fa-solid fa-circle-dot" aria-hidden="true"></i>
+                        <div>
+                            <div class="activity-title">{{ activity.title }}</div>
+                            <div class="activity-meta">{{ activity.time }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="activity-feed-item">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <div>
+                            <div class="activity-title">No recent activity yet</div>
+                            <div class="activity-meta">Task changes and site actions will appear here.</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="bq-card bq-card--quiet" style="flex: 1 1 300px;">
+                <div class="bq-card__head">
+                    <div>
+                        <h2 class="bq-card__title">AI Recommendations</h2>
+                        <p class="bq-card__sub">Next best actions for the project team.</p>
+                    </div>
+                    <span class="widget-icon"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span>
+                </div>
+                <div class="recommendation-list">
+                    {% for item in intel.recommendations|default([]) %}
+                    <div class="recommendation-item">
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        <div class="recommendation-text">{{ item }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </div>
+
+        <!-- ── Core Modules ── -->
+        <section aria-label="Core modules">
+            <h2 class="bq-eyebrow mb-3">Core Modules</h2>
+            <div class="row g-3">
+                {% for feature in dashboard_feature_cards %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="bq-card dashboard-feature-card h-100">
+                        <div class="dashboard-feature-icon">
+                            <i class="fa-solid {{ feature.icon }}" aria-hidden="true"></i>
+                        </div>
+                        <h3 class="dashboard-feature-title h6">{{ feature.title }}</h3>
+                        <p class="dashboard-feature-text">{{ feature.description }}</p>
+                        <div class="dashboard-feature-actions mt-auto">
+                            <a href="{{ feature.href }}" class="bq-btn bq-btn--primary bq-btn--sm">{{ feature.button }}</a>
+                            {% if show_trial_btn %}
+                            <a href="{{ url_for('pricing') }}" class="bq-btn bq-btn--secondary bq-btn--sm">Start Trial</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ── Quick Actions ── -->
+        <article class="bq-card">
+            <div class="bq-card__head">
+                <div>
+                    <h2 class="bq-card__title">Quick Actions</h2>
+                    <p class="bq-card__sub">Frequent field-management actions.</p>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <a class="bq-btn bq-btn--secondary bq-btn--sm" href="{{ url_for('dashboard_tasks') }}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Tasks</a>
+                <a class="bq-btn bq-btn--primary bq-btn--sm" href="{{ url_for('dashboard_dpr_new') }}"><i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i> New DPR</a>
+                <a class="bq-btn bq-btn--secondary bq-btn--sm" href="{{ url_for('dashboard_boq_index') }}"><i class="fa-solid fa-calculator" aria-hidden="true"></i> BOQ</a>
+                <a class="bq-btn bq-btn--secondary bq-btn--sm" href="{{ url_for('inventory_index') }}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Inventory</a>
+            </div>
+        </article>
+
+    </div><!-- /.bq-p2-main -->
+
+    <!-- ── Right-rail: AI Operations Pulse (quieter) ── -->
+    <aside class="bq-p2-rail" aria-label="AI Operations Pulse" id="dashboard-pulse">
+        <div class="bq-card bq-card--quiet" style="position: sticky; top: calc(var(--bq-topbar-h) + 16px);">
+            <div class="bq-card__head">
+                <div>
+                    <div class="bq-eyebrow mb-1">AI Operations Pulse</div>
+                    <p class="bq-card__sub">Live signals from DPR, BOQ, inventory, and tasks.</p>
+                </div>
+                <span style="color: var(--bq-gold);"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
+            </div>
+            {% set primary_insight = intel.ai_insights[0] if intel.ai_insights else None %}
+            <p style="color: var(--bq-text-muted); font-size: var(--bq-fs-sm); margin-bottom: 16px;">
+                {{ primary_insight.body if primary_insight else 'Operational signals are ready for review.' }}
+            </p>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span class="bq-pill bq-pill--gold">Health <span class="bq-num">{{ health_avg }}%</span></span>
+                <span class="bq-pill bq-pill--warning">Risk <span class="bq-num">{{ intel.risk_pressure|default(0) }}%</span></span>
+            </div>
+
+            <div class="bq-side__divider" style="margin: 16px 0;"></div>
+
+            <!-- Notification preview -->
+            <div class="bq-eyebrow mb-2">Notifications</div>
+            <div class="notification-preview-list" style="gap: 8px;">
+                {% for notif in notifications[:4] %}
+                <div class="notification-preview-item">
+                    <i class="fa-solid {{ notif.icon or 'fa-bell' }}" aria-hidden="true"></i>
+                    <div>
+                        <div class="notification-title">{{ notif.title }}</div>
+                        <div class="notification-text">{{ notif.message }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="notification-preview-item">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    <div>
+                        <div class="notification-title">No alerts</div>
+                        <div class="notification-text">Critical signals will appear here.</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
+
+</div><!-- /.bq-p2-layout -->
+</section>
+
+<style>
+/* Phase 2 layout */
+.bq-p2-layout {
+    display: flex;
+    gap: var(--bq-s-5);
+    align-items: flex-start;
+    padding: 0 var(--bq-s-5) var(--bq-s-8);
+}
+.bq-p2-main {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bq-s-5);
+}
+.bq-p2-rail {
+    width: 280px;
+    flex-shrink: 0;
+}
+@media (max-width: 1100px) { .bq-p2-rail { display: none; } }
+
+/* KPI row */
+.bq-kpi-row {
+    display: flex;
+    gap: var(--bq-s-4);
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+.bq-kpi-group {
+    display: flex;
+    gap: var(--bq-s-3);
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+}
+.bq-kpi-group .bq-kpi { flex: 1 1 140px; min-width: 130px; }
+.bq-kpi-divider {
+    width: 1px;
+    background: var(--bq-border);
+    align-self: stretch;
+    min-height: 80px;
+}
+@media (max-width: 768px) { .bq-kpi-divider { display: none; width: 100%; height: 1px; } }
+
+/* Widget row */
+.bq-widget-row {
+    display: flex;
+    gap: var(--bq-s-4);
+    flex-wrap: wrap;
+}
+
+/* Progress bar */
+.bq-progress-wrap { display: flex; align-items: center; gap: var(--bq-s-3); }
+.bq-progress-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bq-surface-2);
+    border-radius: var(--bq-r-pill);
+    overflow: hidden;
+}
+.bq-progress-bar-fill {
+    height: 100%;
+    background: var(--bq-gold);
+    border-radius: var(--bq-r-pill);
+    transition: width 1s var(--bq-ease);
+}
+.bq-progress-pct { font-family: var(--bq-mono); font-size: var(--bq-fs-lg); font-weight: 600; min-width: 56px; text-align: end; }
+
+/* 3-stat row */
+.bq-stat-row { display: flex; gap: var(--bq-s-5); margin-top: var(--bq-s-4); }
+.bq-stat-cell { text-align: center; }
+.bq-stat-value { font-size: var(--bq-fs-2xl); line-height: 1; letter-spacing: -0.02em; }
+.bq-stat-label { margin-top: 4px; }
+
+/* Feature cards in bq-card */
+.bq-card.dashboard-feature-card { display: flex; flex-direction: column; }
+.bq-card.dashboard-feature-card .dashboard-feature-icon {
+    width: 40px; height: 40px;
+    background: rgba(232,197,71,0.1);
+    border-radius: var(--bq-r-2);
+    display: grid; place-items: center;
+    margin-bottom: var(--bq-s-3);
+    color: var(--bq-gold-2);
+    font-size: 16px;
+}
+.bq-card.dashboard-feature-card .dashboard-feature-title { font-family: var(--bq-serif); font-size: var(--bq-fs-md); margin-bottom: 6px; }
+.bq-card.dashboard-feature-card .dashboard-feature-text { color: var(--bq-text-muted); font-size: var(--bq-fs-sm); flex: 1; }
+</style>
+{% endblock %}

@@ -1,0 +1,198 @@
+﻿{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<div class="content-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">{{ tr("Create Daily Progress Report", "إنشاء تقرير تقدم يومي") }}</h4>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard_dpr_index') }}">{{ tr("Back to DPR List", "العودة إلى قائمة التقارير") }}</a>
+    </div>
+	    <form id="dpr-form" method="post" action="{{ url_for('dpr_update', id=edit_id) if is_edit else url_for('dashboard_dpr_submit') }}" enctype="multipart/form-data">
+	        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+	        <input type="hidden" name="project_id" value="{{ dna_project_id or '' }}">
+	        {% if is_edit %}
+        <input type="hidden" id="edit-dpr-id" value="{{ edit_id }}">
+        {% endif %}
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="border rounded p-3 mb-3">
+                    <h6 class="mb-3">{{ tr("Basic Information", "المعلومات الأساسية") }}</h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ tr("Date", "التاريخ") }}</label>
+                            <input class="form-control" type="date" id="reportDate" name="report_date" value="{{ dpr.date_input if dpr and dpr.date_input else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ tr("Project", "المشروع") }}</label>
+                            <select class="form-select" id="project" name="project">
+                                {% for p in dpr_projects %}
+                                <option value="{{ p }}" {{ 'selected' if (dpr.project if dpr else selected_project_name) == p else '' }}>{{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">{{ tr("Zone / Location", "المنطقة / الموقع") }}</label>
+                            <input class="form-control" type="text" id="zone" name="zone" placeholder="{{ tr('e.g. Zone A - Foundation Works', 'مثال: المنطقة أ - أعمال الأساسات') }}" value="{{ dpr.zone if dpr else '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{{ tr("Weather", "الطقس") }}</label>
+                            <select class="form-select" id="weather" name="weather">
+                                {% for option in [tr("Clear", "صحو"), tr("Hot", "حار"), tr("Dusty", "مغبر"), tr("Rain", "ممطر"), tr("Sandstorm", "عاصفة رملية"), tr("Foggy", "ضبابي")] %}
+                                <option {{ 'selected' if (dpr.weather if dpr else '') == option else '' }}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border rounded p-3 mb-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Progress Notes
+                            <span style="color:#6c757d; font-size:0.75rem; font-weight:400;">- type or use voice</span>
+                        </label>
+                        <div class="position-relative">
+                            <textarea name="progress_notes" id="progress_notes" class="form-control" rows="5" placeholder="Describe today's site progress...">{{ dpr.progress_notes if dpr else '' }}</textarea>
+                            <button type="button" id="mic-progress" onclick="startVoiceInput('progress_notes', 'mic-progress')" class="btn btn-sm position-absolute" style="bottom:10px; right:10px; background:#0B3C5D; color:white; border-radius:50%; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; border:none;">
+                                <i class="fa fa-microphone" style="font-size:14px;"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted"><i class="fa fa-globe me-1"></i>Speak in Arabic, English, Urdu, Hindi or any language - AI transcribes it</small>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-bold">
+                            Issues / Delays
+                            <span style="color:#6c757d; font-size:0.75rem; font-weight:400;">- type or use voice</span>
+                        </label>
+                        <div class="position-relative">
+                            <textarea name="issues" id="issues" class="form-control" rows="3" placeholder="List any delays, constraints, or incidents...">{{ dpr.issues if dpr else '' }}</textarea>
+                            <button type="button" id="mic-issues" onclick="startVoiceInput('issues', 'mic-issues')" class="btn btn-sm position-absolute" style="bottom:10px; right:10px; background:#0B3C5D; color:white; border-radius:50%; width:36px; height:36px; padding:0; display:flex; align-items:center; justify-content:center; border:none;">
+                                <i class="fa fa-microphone" style="font-size:14px;"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted"><i class="fa fa-globe me-1"></i>Dictate issues hands-free while walking the site.</small>
+                    </div>
+                </div>
+
+                <div class="border rounded p-3 mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <h6 class="fw-bold mb-0">Worker Attendance</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" onclick="document.getElementById('worker-excel-input').click()" class="btn btn-sm" style="border:1.5px solid #F59E0B; color:#F59E0B; background:white; border-radius:8px; font-size:0.8rem; font-weight:600;">
+                                <i class="fa fa-file-excel me-2"></i>Import from Excel
+                            </button>
+                            <a href="{{ url_for('static', filename='templates/worker_attendance_template.xlsx') }}" download class="btn btn-sm" style="border:1.5px solid #dee2e6; color:#6c757d; background:white; border-radius:8px; font-size:0.8rem;">
+                                <i class="fa fa-download me-1"></i>Download Template
+                            </a>
+                            <button type="button" onclick="addWorkerRow()" class="btn btn-sm" style="background:#0B3C5D; color:white; border-radius:8px; font-size:0.8rem;">
+                                <i class="fa fa-plus me-1"></i>Add Row
+                            </button>
+                        </div>
+                    </div>
+
+                    <input type="file" id="worker-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importWorkerExcel(this.files[0])">
+
+                    <div id="worker-import-status" style="display:none; margin-bottom:10px;">
+                        <div class="d-flex align-items-center gap-2" style="background:#f8f9fa; border-radius:8px; padding:8px 12px; font-size:12px;">
+                            <span class="spinner-border spinner-border-sm text-warning"></span>
+                            <span>Reading Excel file...</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="workerTable">
+                            <thead>
+                                <tr>
+                                    <th>{{ tr("Worker Name", "اسم العامل") }}</th>
+                                    <th>{{ tr("Role", "الدور") }}</th>
+                                    <th>{{ tr("Hours Worked", "ساعات العمل") }}</th>
+                                    <th>{{ tr("Present", "حاضر") }}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="workers-tbody">
+                                {% set worker_rows = dpr.workers_data if dpr and dpr.workers_data else None %}
+                                {% if worker_rows %}
+                                {% for worker in worker_rows %}
+                                <tr>
+                                    <td><input class="form-control form-control-sm" name="worker_name[]" value="{{ worker.name if worker.name is defined else worker['name'] }}"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_role[]" value="{{ worker.role if worker.role is defined else worker['role'] }}"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_hours[]" type="number" step="0.5" value="{{ worker.hours if worker.hours is defined else worker['hours'] }}"></td>
+                                    <td class="text-center"><input type="hidden" name="worker_present_state[]" value="{{ '1' if (worker.present if worker.present is defined else worker['present']) else '0' }}"><input class="form-check-input worker-present" type="checkbox" name="worker_present[]" value="1" {{ 'checked' if (worker.present if worker.present is defined else worker['present']) else '' }}></td>
+                                    <td><button class="btn btn-sm btn-outline-danger remove-worker" type="button"><i class="fa fa-times"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td><input class="form-control form-control-sm" name="worker_name[]" value="Mohammed Al-Rashidi"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_role[]" value="Site Engineer"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_hours[]" type="number" step="0.5" value="9"></td>
+                                    <td class="text-center"><input type="hidden" name="worker_present_state[]" value="1"><input class="form-check-input worker-present" type="checkbox" name="worker_present[]" value="1" checked></td>
+                                    <td><button class="btn btn-sm btn-outline-danger remove-worker" type="button"><i class="fa fa-times"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td><input class="form-control form-control-sm" name="worker_name[]" value="Ahmed Al-Otaibi"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_role[]" value="Civil Foreman"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_hours[]" type="number" step="0.5" value="9"></td>
+                                    <td class="text-center"><input type="hidden" name="worker_present_state[]" value="1"><input class="form-check-input worker-present" type="checkbox" name="worker_present[]" value="1" checked></td>
+                                    <td><button class="btn btn-sm btn-outline-danger remove-worker" type="button"><i class="fa fa-times"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td><input class="form-control form-control-sm" name="worker_name[]"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_role[]"></td>
+                                    <td><input class="form-control form-control-sm" name="worker_hours[]" type="number" step="0.5"></td>
+                                    <td class="text-center"><input type="hidden" name="worker_present_state[]" value="1"><input class="form-check-input worker-present" type="checkbox" name="worker_present[]" value="1" checked></td>
+                                    <td><button class="btn btn-sm btn-outline-danger remove-worker" type="button"><i class="fa fa-times"></i></button></td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="border rounded p-3 mb-3">
+                    <h6 class="mb-2">{{ tr("Site Progress Photos", "صور تقدم الموقع") }}</h6>
+                    <input class="form-control" type="file" id="photos" multiple accept="image/*">
+                    <small class="text-muted d-block mt-1">{{ tr("Max 10 images", "الحد الأقصى 10 صور") }}</small>
+                    <div id="imagePreviewGrid" class="d-flex flex-wrap gap-2 mt-2"></div>
+                </div>
+
+                <input type="hidden" id="aiSummaryField" name="ai_summary" value="{{ dpr.ai_summary if dpr else '' }}">
+                <input type="hidden" id="aiKeyInsightField" name="ai_key_insight">
+                <input type="hidden" id="saveAsDraftField" name="save_as_draft" value="0">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" type="button" id="saveDraftBtn" {% if is_edit %}style="display:none;"{% endif %}>{{ tr("Save as Draft", "حفظ كمسودة") }}</button>
+                    <button id="submitDprBtn" class="btn btn-gold" type="button" onclick="submitDPR()"><i class="fa fa-save me-2"></i>{{ tr("Update DPR", "تحديث التقرير") if is_edit else tr("Save DPR Report", "حفظ تقرير DPR") }}</button>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="border rounded p-3 position-sticky" style="top: 90px;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ tr("Report Preview", "معاينة التقرير") }}</h6>
+                        <small id="previewDate">-</small>
+                    </div>
+                    <hr>
+                    <p class="mb-1"><strong>{{ tr("Project", "المشروع") }}:</strong> <span id="previewProject">-</span></p>
+                    <p class="mb-1"><strong>{{ tr("Zone", "المنطقة") }}:</strong> <span id="previewZone">-</span></p>
+                    <p class="mb-1"><strong>{{ tr("Weather", "الطقس") }}:</strong> <span id="previewWeather">-</span></p>
+                    <p class="mb-1"><strong>{{ tr("Worker Count", "عدد العمال") }}:</strong> <span id="previewWorkerCount">0</span></p>
+                    <p class="mb-1"><strong>{{ tr("Notes", "الملاحظات") }}:</strong> <span id="previewNotes">-</span></p>
+                    <p class="mb-2"><strong>{{ tr("Issues", "المشاكل") }}:</strong> <span id="previewIssues">-</span></p>
+                    <span class="badge bg-secondary mb-2">{{ tr("Images", "الصور") }}: <span id="previewImageCount">0</span></span>
+                    <hr>
+                    <div id="aiSummaryPanel" class="small text-muted mb-2">{{ tr("Fill in the form and click Generate AI Summary", "املأ النموذج ثم اضغط إنشاء ملخص الذكاء الاصطناعي") }}</div>
+                    <button class="btn btn-gold w-100 mb-2" type="button" id="generateAiBtn"><i class="fa-solid fa-robot"></i> {{ tr("Generate AI Summary", "إنشاء ملخص بالذكاء الاصطناعي") }}</button>
+                    <a class="btn btn-danger w-100 mb-2 disabled" id="downloadPdfBtn" href="#" aria-disabled="true">{{ tr("Download PDF", "تنزيل PDF") }}</a>
+                    <a class="btn btn-success w-100 disabled" id="downloadExcelBtn" href="#" aria-disabled="true">{{ tr("Export Excel", "تصدير Excel") }}</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/dpr.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dpr-voice.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Reset Password | BanaaIQ{% endblock %}
+{% block content %}
+<div class="auth-shell py-5">
+    <div class="container d-flex justify-content-center">
+        <div class="auth-card card border-0 shadow-sm w-100" style="max-width: 420px;">
+            <div class="card-body p-4 p-md-5">
+                <h3 class="mb-3">Set New Password</h3>
+                <p class="text-muted small">Enter and confirm your new password below.</p>
+                <form method="post" action="{{ url_for('auth_reset_password', token=token) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label" for="password">New Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               placeholder="At least 8 characters" required minlength="8">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="confirm_password">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password"
+                               name="confirm_password" placeholder="Repeat new password" required minlength="8">
+                    </div>
+                    <button type="submit" class="btn btn-gold w-100">Set New Password</button>
+                </form>
+                <p class="text-center mt-3 small">
+                    <a href="{{ url_for('auth_login') }}">Back to Sign In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ tr('Create Master Inventory', 'إنشاء المخزون الرئيسي') }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex align-items-center mb-4 gap-3">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+      <i class="fas fa-wand-magic-sparkles me-2" style="color:var(--color-gold)"></i>
+      {{ tr('Create Master Inventory', 'إنشاء المخزون الرئيسي') }}
+    </h4>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <form method="POST" action="{{ url_for('inventory_create') }}" enctype="multipart/form-data" id="inv-create-form" data-ai-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3" style="color:var(--color-navy)">{{ tr('Project', 'المشروع') }} <span class="text-danger">*</span></h6>
+            <select name="project_id" class="form-select" required>
+              <option value="">{{ tr('Select a project...', 'اختر مشروعًا...') }}</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}" {% if prefill_project_id and p.id == prefill_project_id %}selected{% endif %}>
+                {{ p.name }} {% if p.project_code %}({{ p.project_code }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="fw-bold mb-0" style="color:var(--color-navy)">
+                {{ tr('Project Description', 'وصف المشروع') }} <span class="text-danger">*</span>
+              </h6>
+              <button type="button" id="mic-btn" class="btn btn-sm btn-outline-danger" title="{{ tr('Record voice description', 'تسجيل وصف صوتي') }}">
+                <i class="fas fa-microphone me-1"></i> {{ tr('Voice Input', 'إدخال صوتي') }}
+              </button>
+            </div>
+            <div id="recording-indicator" class="d-none alert alert-danger py-2 small mb-2">
+              <i class="fas fa-circle text-danger fa-beat me-1"></i>
+              <span id="rec-timer">0:00</span> — {{ tr('Recording... click Stop to finish.', 'جارٍ التسجيل... انقر إيقاف للإنهاء.') }}
+              <button type="button" id="stop-btn" class="btn btn-sm btn-danger ms-2">{{ tr('Stop', 'إيقاف') }}</button>
+            </div>
+            <div id="transcribing-indicator" class="d-none alert alert-info py-2 small mb-2">
+              <i class="fas fa-spinner fa-spin me-1"></i> {{ tr('Transcribing...', 'جارٍ النسخ...') }}
+            </div>
+            <div id="lang-detected" class="d-none mb-2"></div>
+            <textarea name="description" id="description-area" class="form-control" rows="6" required maxlength="3000"
+              placeholder="{{ tr('Describe the project — building type, floors, systems, materials needed. The AI uses this to generate the master inventory.', 'صف المشروع — نوع المبنى، الطوابق، الأنظمة، المواد المطلوبة. يستخدم الذكاء الاصطناعي هذا الوصف لإنشاء المخزون.') }}">{{ prefill_description | default('') }}</textarea>
+            <div class="text-end mt-1"><small class="text-muted" id="char-count">0 / 3000</small></div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3" style="color:var(--color-navy)">
+              {{ tr('Design Files (Optional)', 'ملفات التصميم (اختياري)') }}
+            </h6>
+            <p class="text-muted small mb-3">{{ tr('Upload drawings, plans, or schedules. Supported: PDF, Excel, JPG, PNG. Max 5 files × 10 MB each.', 'ارفع المخططات أو الجداول. المدعوم: PDF، Excel، JPG، PNG. حد أقصى 5 ملفات × 10 ميغابايت لكل منها.') }}</p>
+            <div id="drop-zone" class="border rounded p-4 text-center" style="border:2px dashed var(--color-gold) !important;cursor:pointer;min-height:120px">
+              <i class="fas fa-cloud-upload-alt fa-2x mb-2" style="color:var(--color-gold)"></i>
+              <p class="mb-1 small">{{ tr('Drag & drop files here, or', 'اسحب وأفلت الملفات هنا، أو') }}</p>
+              <label class="btn btn-sm btn-outline-secondary" for="file-input">{{ tr('Browse', 'تصفح') }}</label>
+              <input type="file" id="file-input" name="design_files" multiple accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png" class="d-none">
+            </div>
+            <div id="file-previews" class="row g-2 mt-2"></div>
+          </div>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" id="submit-btn" class="btn btn-gold btn-lg fw-bold">
+            <i class="fas fa-wand-magic-sparkles me-2"></i>
+            {{ tr('Generate Master Inventory', 'توليد المخزون الرئيسي') }}
+          </button>
+          <div id="ai-progress-text" class="small text-muted text-center mt-2 d-none"></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm" style="border-left:4px solid var(--color-gold) !important">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:var(--color-navy)"><i class="fas fa-lightbulb me-2" style="color:var(--color-gold)"></i>{{ tr('Tips', 'نصائح') }}</h6>
+          <ul class="small text-muted mb-0 ps-3">
+            <li class="mb-1">{{ tr('Include building type (villa, tower, warehouse...)', 'أدرج نوع المبنى (فيلا، برج، مستودع...)') }}</li>
+            <li class="mb-1">{{ tr('Mention floor count and total area (sqm)', 'اذكر عدد الطوابق والمساحة الإجمالية') }}</li>
+            <li class="mb-1">{{ tr('List key systems: MEP, HVAC, fire suppression...', 'اذكر الأنظمة الرئيسية: كهرباء، تكييف، إطفاء...') }}</li>
+            <li class="mb-1">{{ tr('Upload floor plans for most accurate material lists', 'ارفع المخططات للحصول على قوائم مواد أدق') }}</li>
+            <li>{{ tr('Use voice input in Arabic or English', 'استخدم الإدخال الصوتي بالعربية أو الإنجليزية') }}</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:var(--color-navy)"><i class="fas fa-info-circle me-2" style="color:var(--color-gold)"></i>{{ tr('How it works', 'كيف يعمل') }}</h6>
+          <ol class="small text-muted mb-0 ps-3">
+            <li class="mb-1">{{ tr('Describe your project or upload design files', 'صف مشروعك أو ارفع ملفات التصميم') }}</li>
+            <li class="mb-1">{{ tr('AI detects required inventory categories automatically', 'يكتشف الذكاء الاصطناعي الفئات المطلوبة تلقائيًا') }}</li>
+            <li class="mb-1">{{ tr('Master inventory generated with 2025 Saudi market rates', 'يُولَّد المخزون بأسعار السوق السعودي 2025') }}</li>
+            <li>{{ tr('Distribute items to site engineers by category', 'وزّع العناصر على مهندسي الموقع حسب الفئة') }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Character counter
+const desc = document.getElementById('description-area');
+const counter = document.getElementById('char-count');
+if (desc) {
+  desc.addEventListener('input', () => { counter.textContent = desc.value.length + ' / 3000'; });
+  counter.textContent = desc.value.length + ' / 3000';
+}
+
+// File upload + preview
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const previews = document.getElementById('file-previews');
+let selectedFiles = [];
+
+function updateFileInput() {
+  const dt = new DataTransfer();
+  selectedFiles.forEach(f => dt.items.add(f));
+  fileInput.files = dt.files;
+}
+
+function addFiles(fileList) {
+  for (const f of fileList) {
+    if (selectedFiles.length >= 5) break;
+    if (selectedFiles.find(x => x.name === f.name)) continue;
+    selectedFiles.push(f);
+    const col = document.createElement('div');
+    col.className = 'col-4 col-md-3';
+    const ext = f.name.split('.').pop().toLowerCase();
+    const isImg = ['jpg','jpeg','png'].includes(ext);
+    if (isImg) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        col.innerHTML = `<div class="position-relative border rounded p-1 text-center" style="height:80px">
+          <img src="${e.target.result}" style="max-height:60px;max-width:100%;object-fit:cover">
+          <button type="button" class="btn-close position-absolute top-0 end-0" style="font-size:10px" data-name="${f.name}"></button>
+          <small class="d-block text-truncate" style="font-size:9px">${f.name}</small>
+        </div>`;
+        col.querySelector('.btn-close').onclick = () => removeFile(f.name, col);
+      };
+      reader.readAsDataURL(f);
+    } else {
+      const icon = ext === 'pdf' ? 'fa-file-pdf text-danger' : 'fa-file-excel text-success';
+      col.innerHTML = `<div class="position-relative border rounded p-2 text-center" style="height:80px">
+        <i class="fas ${icon} fa-2x"></i>
+        <button type="button" class="btn-close position-absolute top-0 end-0" style="font-size:10px" data-name="${f.name}"></button>
+        <small class="d-block text-truncate" style="font-size:9px">${f.name}</small>
+      </div>`;
+      col.querySelector('.btn-close').onclick = () => removeFile(f.name, col);
+    }
+    previews.appendChild(col);
+  }
+  updateFileInput();
+}
+
+function removeFile(name, col) {
+  selectedFiles = selectedFiles.filter(f => f.name !== name);
+  col.remove();
+  updateFileInput();
+}
+
+dropZone.addEventListener('click', (e) => { if (e.target !== fileInput) fileInput.click(); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('bg-light'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('bg-light'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('bg-light'); addFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => { addFiles(fileInput.files); });
+
+// Voice recording
+let mediaRecorder, audioChunks = [], recInterval;
+const micBtn = document.getElementById('mic-btn');
+const stopBtn = document.getElementById('stop-btn');
+const recIndicator = document.getElementById('recording-indicator');
+const transIndicator = document.getElementById('transcribing-indicator');
+const langDetected = document.getElementById('lang-detected');
+const recTimer = document.getElementById('rec-timer');
+
+micBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(recInterval);
+      recIndicator.classList.add('d-none');
+      transIndicator.classList.remove('d-none');
+      const blob = new Blob(audioChunks, {type: 'audio/webm'});
+      const fd = new FormData();
+      fd.append('audio', blob, 'recording.webm');
+      try {
+        const resp = await fetch('/api/inventory/transcribe', {method:'POST', body:fd});
+        const data = await resp.json();
+        transIndicator.classList.add('d-none');
+        if (data.success) {
+          desc.value = (desc.value ? desc.value + '\n' : '') + data.text;
+          counter.textContent = desc.value.length + ' / 3000';
+          langDetected.classList.remove('d-none');
+          langDetected.innerHTML = `<small class="text-success"><i class="fas fa-check-circle me-1"></i>{{ tr('Transcribed','تم النسخ') }}${data.language_detected ? ' (' + data.language_detected + ')' : ''}</small>`;
+        } else {
+          alert('{{ tr("Transcription failed: ","فشل النسخ: ") }}' + (data.error || ''));
+        }
+      } catch(e) {
+        transIndicator.classList.add('d-none');
+        alert('{{ tr("Transcription error. Please try again.","خطأ في النسخ. حاول مجددًا.") }}');
+      }
+    };
+    mediaRecorder.start();
+    let secs = 0;
+    recInterval = setInterval(() => { secs++; recTimer.textContent = Math.floor(secs/60)+':'+(secs%60+'').padStart(2,'0'); }, 1000);
+    recIndicator.classList.remove('d-none');
+    micBtn.classList.add('d-none');
+  } catch(e) {
+    alert('{{ tr("Microphone access denied.","تم رفض الوصول إلى الميكروفون.") }}');
+  }
+});
+
+stopBtn.addEventListener('click', () => { if (mediaRecorder) mediaRecorder.stop(); micBtn.classList.remove('d-none'); });
+
+// Loading state on submit
+document.getElementById('inv-create-form').addEventListener('submit', function() {
+  const btn = document.getElementById('submit-btn');
+  const progressText = document.getElementById('ai-progress-text');
+  const progressSteps = [
+    'Detecting categories... / \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0641\u0626\u0627\u062A...',
+    'Generating categories in parallel... / \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0641\u0626\u0627\u062A...',
+    'Finalizing inventory... / \u0625\u0646\u0647\u0627\u0621 \u0627\u0644\u0645\u062E\u0632\u0648\u0646...'
+  ];
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{{ tr("Generating Inventory...","جارٍ إنشاء المخزون...") }}';
+  if (progressText) {
+    let stepIndex = 0;
+    progressText.textContent = progressSteps[stepIndex];
+    progressText.classList.remove('d-none');
+    window.setTimeout(() => {
+      stepIndex = 1;
+      progressText.textContent = progressSteps[stepIndex];
+      window.setInterval(() => {
+        stepIndex = (stepIndex + 1) % progressSteps.length;
+        progressText.textContent = progressSteps[stepIndex];
+      }, 3000);
+    }, 2000);
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Request Stock | Inventory | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+      <i class="fas fa-hand-holding me-2" style="color:#F59E0B;"></i>
+      Request Stock
+      <small class="text-muted fs-6 ms-2">/ طلب مخزون</small>
+    </h4>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+
+      {# Item context card — shown when requesting existing item with rich data #}
+      {% if prefill_item and (prefill_item.specification or prefill_item.brand_suggestions_json) %}
+      <div class="card border-0 shadow-sm mb-3" style="border-left:4px solid #F59E0B !important;">
+        <div class="card-body p-3">
+          <div class="fw-semibold small mb-2" style="color:#0B3C5D;">
+            <i class="fas fa-clipboard-list me-1" style="color:#F59E0B;"></i>
+            Item Specification &amp; Procurement Context
+          </div>
+          {% if prefill_item.specification %}
+          <div class="small mb-2">
+            <span class="text-muted fw-semibold">Spec:</span> {{ prefill_item.specification }}
+          </div>
+          {% endif %}
+          {% if prefill_item.brand_suggestions_json %}
+          {% set brands = prefill_item.brand_suggestions_json | from_json %}
+          {% if brands %}
+          <div class="small mb-2">
+            <span class="text-muted fw-semibold">Brands:</span>
+            {% for b in brands %}<span class="badge bg-light text-dark border me-1" style="font-size:11px;">{{ b }}</span>{% endfor %}
+          </div>
+          {% endif %}
+          {% endif %}
+          {% if prefill_item.min_order_qty %}
+          <div class="small text-muted">
+            <i class="fas fa-box me-1"></i>Min order: <strong>{{ '{:,.0f}'.format(prefill_item.min_order_qty | float) }} {{ prefill_item.min_order_unit or '' }}</strong>
+            {% if prefill_item.reorder_lead_time_days %}
+              &nbsp;·&nbsp; <i class="fas fa-clock me-1"></i>Lead time: <strong>{{ prefill_item.reorder_lead_time_days }} days</strong>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <form method="POST" action="{{ url_for('inventory_request') }}" id="request-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Project <span class="text-danger">*</span></label>
+              <select name="project_id" class="form-select" required>
+                <option value="">Select project...</option>
+                {% for p in projects %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            {# Urgency #}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Urgency / الأولوية</label>
+              <div class="d-flex gap-2">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="urgency" id="urg_normal" value="normal" checked>
+                  <label class="form-check-label small" for="urg_normal">Normal</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="urgency" id="urg_urgent" value="urgent">
+                  <label class="form-check-label small text-warning fw-semibold" for="urg_urgent">Urgent</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="urgency" id="urg_critical" value="critical">
+                  <label class="form-check-label small text-danger fw-semibold" for="urg_critical">Critical</label>
+                </div>
+              </div>
+            </div>
+
+            {% if prefill_item %}
+            <input type="hidden" name="inventory_item_id" value="{{ prefill_item.id }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item</label>
+              <div class="form-control bg-light">
+                <strong>{{ prefill_item.name }}</strong>
+                {% if prefill_item.name_ar %}
+                  <span class="text-muted ms-2" dir="rtl">{{ prefill_item.name_ar }}</span>
+                {% endif %}
+                <span class="badge bg-light text-dark ms-2">{{ prefill_item.category or '' }}</span>
+              </div>
+              <div class="form-text">Current stock: {{ '{:,.2f}'.format(prefill_item.stock | float) }} {{ prefill_item.unit or '' }}</div>
+            </div>
+
+            {# Preferred brand from suggestions #}
+            {% if prefill_item.brand_suggestions_json %}
+            {% set brands = prefill_item.brand_suggestions_json | from_json %}
+            {% if brands %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Preferred Brand (optional) / الماركة المفضلة</label>
+              <select name="preferred_brand" class="form-select form-select-sm">
+                <option value="">No preference / أي ماركة</option>
+                {% for b in brands %}
+                <option value="{{ b }}">{{ b }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            {% else %}
+            <input type="hidden" name="inventory_item_id" value="">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item Name (English)</label>
+              <input type="text" name="proposed_item_name" class="form-control"
+                     placeholder="e.g. Portland Cement Type I" maxlength="200">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item Name (Arabic)</label>
+              <input type="text" name="proposed_item_name_ar" class="form-control"
+                     placeholder="اسم المادة بالعربية" maxlength="200" dir="rtl">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Specification Required (optional)</label>
+              <input type="text" name="specification_requested" class="form-control form-control-sm"
+                     maxlength="1000" placeholder="Grade, standard, or technical requirement you need...">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Preferred Brand (optional)</label>
+              <input type="text" name="preferred_brand" class="form-control form-control-sm"
+                     maxlength="200" placeholder="e.g. Yamama Cement, SABIC HADEED">
+            </div>
+            {% endif %}
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Requested Quantity <span class="text-danger">*</span></label>
+                <input type="number" name="requested_qty" class="form-control"
+                       step="0.001" min="0.001" required placeholder="0">
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">Unit</label>
+                <input type="text" name="unit" class="form-control"
+                       placeholder="e.g. bags, Ton, m²" maxlength="20"
+                       value="{{ prefill_item.unit if prefill_item else '' }}">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description / Justification</label>
+              <textarea name="description" class="form-control" rows="4" maxlength="2000"
+                placeholder="Explain why you need this stock — quantity justification, urgency, project phase..."></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-gold fw-bold" id="submit-btn">
+                <i class="fas fa-paper-plane me-1"></i> Submit Request
+              </button>
+              <a href="{{ url_for('inventory_index') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4 mt-4 mt-lg-0">
+      <div class="card border-0 shadow-sm" style="border-left:4px solid #F59E0B !important;">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#0B3C5D;"><i class="fas fa-info-circle me-2" style="color:#F59E0B;"></i>How it works</h6>
+          <ol class="small text-muted mb-0 ps-3">
+            <li class="mb-1">Submit your stock request with quantity and justification</li>
+            <li class="mb-1">Your Project Manager reviews the request</li>
+            <li class="mb-1">PM approves or rejects with notes</li>
+            <li>Stock is added to your assigned inventory upon approval</li>
+          </ol>
+        </div>
+      </div>
+      {% if prefill_item and prefill_item.safety_notes %}
+      <div class="alert alert-warning mt-3 small">
+        <i class="fas fa-hard-hat me-1"></i>
+        <strong>Safety reminder:</strong> {{ prefill_item.safety_notes }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+</style>
+<script>
+document.getElementById('request-form')?.addEventListener('submit', function() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+});
+</script>
+{% endblock %}

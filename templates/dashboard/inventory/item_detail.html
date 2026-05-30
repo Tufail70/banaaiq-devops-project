@@ -1,0 +1,264 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ item.name }} | Inventory | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#0B3C5D;">{{ item.name }}</h4>
+      {% if item.name_ar %}
+        <div class="text-muted small" dir="rtl">{{ item.name_ar }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+    {# Left column: item details #}
+    <div class="col-md-5 col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#0B3C5D;"><i class="fas fa-box me-2" style="color:#F59E0B;"></i>Item Details</h6>
+
+          <dl class="row small mb-0">
+            <dt class="col-5 text-muted">Category</dt>
+            <dd class="col-7">{{ item.category or '—' }}</dd>
+            {% if item.category_ar %}
+            <dt class="col-5 text-muted">Category (AR)</dt>
+            <dd class="col-7" dir="rtl">{{ item.category_ar }}</dd>
+            {% endif %}
+            <dt class="col-5 text-muted">Unit</dt>
+            <dd class="col-7">{{ item.unit or '—' }}</dd>
+            <dt class="col-5 text-muted">Current Stock</dt>
+            <dd class="col-7 fw-bold {% if item.status == 'critical' %}text-danger{% elif item.status == 'low' %}text-warning{% else %}text-success{% endif %}">
+              {{ '{:,.2f}'.format(item.stock | float) }} {{ item.unit or '' }}
+            </dd>
+            <dt class="col-5 text-muted">Threshold</dt>
+            <dd class="col-7">{{ '{:,.2f}'.format(item.threshold | float) }}</dd>
+            <dt class="col-5 text-muted">Unit Price</dt>
+            <dd class="col-7">SAR {{ '{:,.2f}'.format(item.value_sar | float) }}</dd>
+            {% if item.supplier %}
+            <dt class="col-5 text-muted">Supplier</dt>
+            <dd class="col-7">{{ item.supplier }}</dd>
+            {% endif %}
+            {% if item.project %}
+            <dt class="col-5 text-muted">Project</dt>
+            <dd class="col-7">{{ item.project.name }}</dd>
+            {% endif %}
+            {% if assignment %}
+            <dt class="col-5 text-muted">Allocated</dt>
+            <dd class="col-7 fw-bold text-navy">{{ '{:,.2f}'.format(assignment.allocated_qty | float) }}</dd>
+            {% endif %}
+          </dl>
+
+          {% if item.threshold | float > 0 %}
+          {% set pct = [((item.stock | float) / (item.threshold | float) * 100), 100] | min %}
+          <div class="mt-3">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Stock Level</span>
+              <span>{{ '{:.0f}'.format(pct) }}%</span>
+            </div>
+            <div class="progress" style="height:8px;">
+              <div class="progress-bar {% if item.status == 'critical' %}bg-danger{% elif item.status == 'low' %}bg-warning{% else %}bg-success{% endif %}"
+                   role="progressbar" style="width:{{ pct }}%"></div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mt-3 d-flex gap-2">
+            <a href="{{ url_for('inventory_request', item_id=item.id) }}" class="btn btn-outline-gold btn-sm flex-fill">
+              <i class="fas fa-hand-holding me-1"></i> Request More
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {# Procurement details card — shown when rich data exists #}
+      {% if item.specification or item.brand_suggestions_json or item.storage_requirements or item.safety_notes %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#0B3C5D;">
+            <i class="fas fa-clipboard-list me-2" style="color:#F59E0B;"></i>Procurement Details
+            <small class="text-muted fw-normal"> / تفاصيل المشتريات</small>
+          </h6>
+
+          {% if item.specification %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Specification / المواصفة</div>
+            <div class="small">{{ item.specification }}</div>
+          </div>
+          {% endif %}
+
+          {% if item.brand_suggestions_json %}
+          {% set brands = item.brand_suggestions_json | from_json %}
+          {% if brands %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Brand Suggestions / الماركات المقترحة</div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for b in brands %}
+              <span class="badge bg-light text-dark border" style="font-size:11px;">{{ b }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% if item.reorder_lead_time_days or item.min_order_qty %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Order Info / معلومات الطلب</div>
+            <div class="small">
+              {% if item.reorder_lead_time_days %}
+                <span class="me-3"><i class="fas fa-clock me-1 text-muted"></i>Lead time: <strong>{{ item.reorder_lead_time_days }} days</strong></span>
+              {% endif %}
+              {% if item.min_order_qty %}
+                <span><i class="fas fa-box me-1 text-muted"></i>Min order: <strong>{{ '{:,.0f}'.format(item.min_order_qty | float) }} {{ item.min_order_unit or '' }}</strong></span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if item.storage_requirements %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Storage / التخزين</div>
+            <div class="small text-muted">{{ item.storage_requirements }}</div>
+          </div>
+          {% endif %}
+
+          {% if item.shelf_life_days %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Shelf Life / مدة الصلاحية</div>
+            <div class="small">
+              <strong>{{ item.shelf_life_days }} days</strong>
+              {% if item.shelf_life_note %}<br><span class="text-muted">{{ item.shelf_life_note }}</span>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if item.alternative_items_json %}
+          {% set alts = item.alternative_items_json | from_json %}
+          {% if alts %}
+          <div class="mb-3">
+            <div class="text-muted small fw-semibold mb-1">Alternatives / البدائل</div>
+            {% for alt in alts %}
+            <div class="small mb-1">
+              <span class="fw-semibold">{{ alt.name }}</span>
+              {% if alt.note %}<span class="text-muted"> — {{ alt.note }}</span>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endif %}
+
+          {% if item.safety_notes %}
+          <div class="alert alert-warning py-2 px-3 mb-0 small">
+            <i class="fas fa-hard-hat me-1"></i>
+            <strong>Safety / السلامة:</strong> {{ item.safety_notes }}
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-7 col-lg-8">
+      {% if current_user.role == 'site_engineer' and assignment %}
+      {# Log Consumption Form #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:#0B3C5D;"><i class="fas fa-minus-circle me-2 text-danger"></i>Log Consumption</h6>
+          <form method="POST" action="{{ url_for('inventory_item_consume', item_id=item.id) }}" id="consume-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+              <div class="col-sm-4">
+                <label class="form-label fw-semibold small">Qty Used <span class="text-danger">*</span></label>
+                <div class="input-group input-group-sm">
+                  <input type="number" name="qty_used" class="form-control" step="0.001" min="0.001"
+                         max="{{ item.stock | float }}" required placeholder="0.0">
+                  <span class="input-group-text">{{ item.unit or 'units' }}</span>
+                </div>
+                <div class="form-text">Max: {{ '{:,.2f}'.format(item.stock | float) }}</div>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label fw-semibold small">Zone / Location</label>
+                <input type="text" name="zone" class="form-control form-control-sm" placeholder="e.g. Block A, Floor 2" maxlength="100">
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label fw-semibold small">Notes</label>
+                <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional notes" maxlength="500">
+              </div>
+            </div>
+            <div class="mt-3">
+              <button type="submit" class="btn btn-sm btn-gold fw-semibold" id="consume-btn">
+                <i class="fas fa-minus me-1"></i> Log Consumption
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Usage Log #}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0" style="color:#0B3C5D;"><i class="fas fa-history me-2" style="color:#F59E0B;"></i>Usage Log</h6>
+            <span class="badge bg-light text-dark">{{ usage_logs | length }} entries</span>
+          </div>
+          {% if usage_logs %}
+          <div class="table-responsive">
+            <table class="table table-hover small mb-0">
+              <thead style="background:#f8f9fa;">
+                <tr>
+                  <th class="ps-3">Date</th>
+                  <th>Qty Used</th>
+                  <th>Used By</th>
+                  <th>Zone</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for log in usage_logs %}
+                <tr>
+                  <td class="ps-3 text-muted">{{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '—' }}</td>
+                  <td class="fw-semibold">{{ '{:,.2f}'.format(log.quantity_used | float) }} {{ log.unit or '' }}</td>
+                  <td>{{ log.used_by or '—' }}</td>
+                  <td class="text-muted">{{ log.zone or '—' }}</td>
+                  <td class="text-muted">{{ log.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted small">No consumption logged yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+.btn-outline-gold { color:#F59E0B; border-color:#F59E0B; }
+.btn-outline-gold:hover { background:#F59E0B; color:#fff; }
+.text-navy { color:#0B3C5D !important; }
+</style>
+<script>
+document.getElementById('consume-form')?.addEventListener('submit', function() {
+  const btn = document.getElementById('consume-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Logging...';
+});
+</script>
+{% endblock %}

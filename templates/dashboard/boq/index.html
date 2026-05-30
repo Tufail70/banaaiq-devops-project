@@ -1,0 +1,272 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% from "_macros/bilingual.html" import page_title %}
+{% block page_title %}{{ tr('Bill of Quantities', 'جداول الكميات') }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4">
+
+{% if role == 'pm' %}
+
+  {# ── Page header ── #}
+  {% call page_title('Bill of Quantities', 'جدول الكميات',
+      sub='Master BOQs with role-specific review and SAR/INR pricing context.') %}
+    <a href="{{ url_for('boq_create') }}" class="bq-btn bq-btn--primary">
+      <i class="fa fa-pen-to-square" aria-hidden="true"></i>
+      {{ tr('Create Master BOQ', 'إنشاء جدول رئيسي') }}
+    </a>
+    <a href="{{ url_for('boq_create_manual') }}" class="bq-btn bq-btn--secondary">
+      <i class="fa fa-pen" aria-hidden="true"></i>
+      {{ tr('Create Manually', 'إنشاء يدوي') }}
+    </a>
+    <a href="{{ url_for('boq_upload_revise') }}" class="bq-btn bq-btn--secondary">
+      <i class="fa fa-arrow-up-from-bracket" aria-hidden="true"></i>
+      {{ tr('Upload & Revise', 'تحميل وتعديل') }}
+    </a>
+  {% endcall %}
+
+  {% if boq_data %}
+  <div class="bq-card bq-card--bare">
+    <div class="table-responsive">
+      <table class="bq-table">
+        <thead>
+          <tr>
+            <th>{{ tr('Title', 'العنوان') }}</th>
+            <th>{{ tr('Project', 'المشروع') }}</th>
+            <th>{{ tr('Sections', 'الأقسام') }}</th>
+            <th class="num">{{ tr('Grand Total', 'الإجمالي') }} <span class="bq-mono" style="font-size:9px;opacity:.6;">SAR</span></th>
+            <th>{{ tr('Status', 'الحالة') }}</th>
+            <th>{{ tr('Created', 'أُنشئ في') }}</th>
+            <th style="width:48px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in boq_data %}
+          {% set b = item.boq %}
+          <tr>
+            <td style="font-weight:500;">{{ b.title }}</td>
+            <td style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);">{{ b.dna_project.name if b.dna_project else (b.project or '—') }}</td>
+            <td><span class="bq-pill bq-pill--neutral">{{ item.sections_count }}</span></td>
+            <td class="num">{{ "{:,.0f}".format(b.grand_total|float) }}</td>
+            <td>
+              <span class="bq-pill {% if b.status == 'master' %}bq-pill--gold{% elif b.status == 'distributed' %}bq-pill--success{% else %}bq-pill--neutral{% endif %}">
+                {{ b.status or 'draft' }}
+              </span>
+            </td>
+            <td style="font-family:var(--bq-mono);font-size:var(--bq-fs-xs);color:var(--bq-text-muted);">{{ b.created_at.strftime('%Y-%m-%d') if b.created_at else '—' }}</td>
+            <td class="text-end actions-cell">
+              {# Single ⋯ overflow menu #}
+              <div class="dropdown">
+                <button class="bq-overflow-btn" type="button"
+                  data-bs-toggle="dropdown" data-bs-strategy="fixed" aria-expanded="false"
+                  aria-label="{{ tr('Actions','إجراءات') }} {{ b.title }}">
+                  <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('boq_view', boq_id=b.id) }}">
+                      <i class="fa fa-eye me-2" aria-hidden="true"></i>{{ tr('View','عرض') }}
+                    </a>
+                  </li>
+                  {% if b.is_master %}
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('boq_distribute', boq_id=b.id) }}">
+                      <i class="fa fa-share-nodes me-2" aria-hidden="true"></i>{{ tr('Distribute','توزيع') }}
+                    </a>
+                  </li>
+                  {% endif %}
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('boq_download_excel', boq_id=b.id) }}">
+                      <i class="fa fa-file-excel me-2" aria-hidden="true"></i>{{ tr('Export Excel','تصدير Excel') }}
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('boq_download_pdf', boq_id=b.id) }}">
+                      <i class="fa fa-file-pdf me-2" aria-hidden="true"></i>{{ tr('Export PDF','تصدير PDF') }}
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form method="POST" action="{{ url_for('boq_delete', boq_id=b.id) }}" class="d-inline"
+                          onsubmit="return confirm('{{ tr('Delete this BOQ?','حذف هذا الجدول؟') }}')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard_boq_index') }}">
+                      <button type="submit" class="dropdown-item text-danger">
+                        <i class="fa fa-trash me-2" aria-hidden="true"></i>{{ tr('Delete','حذف') }}
+                      </button>
+                    </form>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bq-empty">
+    <div class="bq-empty__icon">
+      <i class="fa fa-calculator" aria-hidden="true"></i>
+    </div>
+    <h2 class="bq-empty__title">{{ tr('No Master BOQs yet', 'لا توجد جداول كميات رئيسية بعد') }}</h2>
+    <p class="bq-empty__body">
+      {{ tr('Create your first Master BOQ to start tracking quantities, distributing to engineers, and exporting reports.',
+            'أنشئ أول جدول كميات رئيسي لبدء تتبع الكميات وتوزيعها على المهندسين وتصدير التقارير.') }}
+    </p>
+    <div class="bq-empty__cta">
+      <a href="{{ url_for('boq_create') }}" class="bq-btn bq-btn--primary">
+        <i class="fa fa-plus" aria-hidden="true"></i> {{ tr('Create Master BOQ', 'إنشاء جدول رئيسي') }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+{% else %} {# SE view #}
+
+  {# ── Page header ── #}
+  {% call page_title(tr('My BOQs','جداولي'), ar='' if not is_arabic else None,
+      sub=tr('Your assigned and self-created Bill of Quantities records.',
+             'سجلات جداول الكميات المُسندة إليك والتي أنشأتها بنفسك.')) %}
+    <a href="{{ url_for('boq_create_manual') }}" class="bq-btn bq-btn--secondary">
+      <i class="fa fa-pen" aria-hidden="true"></i> {{ tr('Create Manually', 'إنشاء يدوي') }}
+    </a>
+    <a href="{{ url_for('boq_analyze_upload') }}" class="bq-btn bq-btn--primary">
+      <i class="fa fa-arrow-up-from-bracket" aria-hidden="true"></i> {{ tr('Upload & Analyze', 'تحميل وتحليل') }}
+    </a>
+  {% endcall %}
+
+  {# ── Assigned by PM ── #}
+  <p class="bq-eyebrow mb-3">
+    <i class="fa fa-share-nodes" aria-hidden="true"></i>&ensp;{{ tr('Assigned to Me', 'المُسندة إليّ') }}
+  </p>
+  {% if my_boqs %}
+  <div class="row g-3 mb-5">
+    {% for b in my_boqs %}
+    <div class="col-md-6 col-lg-4">
+      <div class="bq-card h-100" style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px;">
+          <span class="bq-pill bq-pill--gold">{{ b.trade_section or tr('General','عام') }}</span>
+          <span class="bq-pill bq-pill--neutral bq-mono">v{{ b.version or 1 }}</span>
+        </div>
+        <h3 style="font-family:var(--bq-serif);font-size:var(--bq-fs-lg);margin:0 0 4px;letter-spacing:-0.01em;">{{ b.title }}</h3>
+        <p style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);margin:0 0 8px;">{{ b.dna_project.name if b.dna_project else (b.project or '—') }}</p>
+        <p style="font-family:var(--bq-mono);font-size:var(--bq-fs-md);font-weight:600;margin:0 0 12px;" class="bq-num">{{ "{:,.0f}".format(b.grand_total|float) }} <span style="font-size:11px;opacity:.6;">SAR</span></p>
+        <span class="bq-pill {% if b.status == 'distributed' %}bq-pill--gold{% elif b.status == 'revised' %}bq-pill--warning{% elif b.status == 'archived' %}bq-pill--neutral{% else %}bq-pill--neutral{% endif %}">{{ b.status or 'draft' }}</span>
+        <div style="display:flex;gap:8px;margin-top:auto;padding-top:16px;">
+          <a href="{{ url_for('boq_view', boq_id=b.id) }}" class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">{{ tr('View','عرض') }}</a>
+          {% if b.status != 'archived' %}
+          <a href="{{ url_for('boq_revise', boq_id=b.id) }}" class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">{{ tr('Revise','تعديل') }}</a>
+          {% endif %}
+          <a href="{{ url_for('boq_download_pdf', boq_id=b.id) }}" class="bq-btn bq-btn--ghost bq-btn--sm" aria-label="Download PDF">
+            <i class="fa fa-file-pdf" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+      <div class="bq-empty">
+        <div class="bq-empty__icon"><i class="fa fa-inbox" aria-hidden="true"></i></div>
+        <h3 class="bq-empty__title">{{ tr('No BOQs assigned yet', 'لم يتم تعيين أي جدول كميات لك بعد') }}</h3>
+        <p class="bq-empty__body">{{ tr('Your project manager will assign BOQ packages here.', 'سيقوم مدير مشروعك بتعيين حزم جداول الكميات هنا.') }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── My Analyses ── #}
+  <p class="bq-eyebrow mb-3">
+    <i class="fa fa-magnifying-glass" aria-hidden="true"></i>&ensp;{{ tr('My Analyses', 'تحليلاتي') }}
+  </p>
+  {% if my_analyses %}
+  <div class="row g-3 mb-5">
+    {% for b in my_analyses %}
+    <div class="col-md-6 col-lg-4">
+      <div class="bq-card h-100" style="display:flex;flex-direction:column;border-inline-start:3px solid var(--bq-gold);">
+        <div style="margin-bottom:12px;"><span class="bq-pill bq-pill--gold">{{ tr('Analysis','تحليل') }}</span></div>
+        <h3 style="font-family:var(--bq-serif);font-size:var(--bq-fs-lg);margin:0 0 4px;letter-spacing:-0.01em;">{{ b.title }}</h3>
+        <p style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);margin:0 0 8px;">{{ b.dna_project.name if b.dna_project else '—' }}</p>
+        <p style="font-family:var(--bq-mono);font-size:var(--bq-fs-md);font-weight:600;margin:0 0 4px;" class="bq-num">{{ "{:,.0f}".format(b.grand_total|float) }} <span style="font-size:11px;opacity:.6;">SAR</span></p>
+        <small style="color:var(--bq-text-faint);font-family:var(--bq-mono);font-size:var(--bq-fs-xs);">{{ b.created_at.strftime('%d %b %Y') if b.created_at else '' }}</small>
+        <div style="display:flex;gap:8px;margin-top:auto;padding-top:16px;">
+          <a href="{{ url_for('boq_view', boq_id=b.id) }}" class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">{{ tr('View','عرض') }}</a>
+          <a href="{{ url_for('boq_download_pdf', boq_id=b.id) }}" class="bq-btn bq-btn--ghost bq-btn--sm" aria-label="PDF">
+            <i class="fa fa-file-pdf" aria-hidden="true"></i>
+          </a>
+          <form method="POST" action="{{ url_for('boq_delete', boq_id=b.id) }}" class="d-inline"
+                onsubmit="return confirm('{{ tr('Delete this analysis?','حذف هذا التحليل؟') }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('dashboard_boq_index') }}">
+            <button type="submit" class="bq-btn bq-btn--ghost bq-btn--sm" aria-label="{{ tr('Delete','حذف') }}" style="color:var(--bq-danger);">
+              <i class="fa fa-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bq-empty mb-5">
+    <div class="bq-empty__icon"><i class="fa fa-file-circle-plus" aria-hidden="true"></i></div>
+    <h3 class="bq-empty__title">{{ tr('No analyses yet', 'لا توجد تحليلات بعد') }}</h3>
+    <p class="bq-empty__body">{{ tr('Upload a BOQ file to analyze.', 'حمّل ملف جدول كميات لتحليله.') }}</p>
+    <div class="bq-empty__cta">
+      <a href="{{ url_for('boq_analyze_upload') }}" class="bq-btn bq-btn--primary bq-btn--sm">
+        <i class="fa fa-arrow-up-from-bracket" aria-hidden="true"></i> {{ tr('Upload & Analyze', 'تحميل وتحليل') }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── My Manual BOQs ── #}
+  <p class="bq-eyebrow mb-3">
+    <i class="fa fa-pen-to-square" aria-hidden="true"></i>&ensp;{{ tr('My Manual BOQs', 'جداولي اليدوية') }}
+  </p>
+  {% if my_manual_boqs %}
+  <div class="row g-3 mb-5">
+    {% for b in my_manual_boqs %}
+    <div class="col-md-6 col-lg-4">
+      <div class="bq-card h-100" style="display:flex;flex-direction:column;border-inline-start:3px solid var(--bq-blue);">
+        <div style="margin-bottom:12px;"><span class="bq-pill" style="background:rgba(29,78,137,0.12);color:var(--bq-blue);">{{ tr('Manual','يدوي') }}</span></div>
+        <h3 style="font-family:var(--bq-serif);font-size:var(--bq-fs-lg);margin:0 0 4px;letter-spacing:-0.01em;">{{ b.title }}</h3>
+        <p style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);margin:0 0 8px;">{{ b.dna_project.name if b.dna_project else '—' }}</p>
+        <p style="font-family:var(--bq-mono);font-size:var(--bq-fs-md);font-weight:600;margin:0 0 4px;" class="bq-num">{{ "{:,.0f}".format(b.grand_total|float) }} <span style="font-size:11px;opacity:.6;">SAR</span></p>
+        <small style="color:var(--bq-text-faint);font-family:var(--bq-mono);font-size:var(--bq-fs-xs);">{{ b.created_at.strftime('%d %b %Y') if b.created_at else '' }}</small>
+        <div style="display:flex;gap:8px;margin-top:auto;padding-top:16px;">
+          <a href="{{ url_for('boq_view', boq_id=b.id) }}" class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">{{ tr('View','عرض') }}</a>
+          <a href="{{ url_for('boq_edit_items', boq_id=b.id) }}" class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">{{ tr('Edit','تعديل') }}</a>
+          <a href="{{ url_for('boq_download_pdf', boq_id=b.id) }}" class="bq-btn bq-btn--ghost bq-btn--sm" aria-label="PDF">
+            <i class="fa fa-file-pdf" aria-hidden="true"></i>
+          </a>
+          <form method="POST" action="{{ url_for('boq_delete', boq_id=b.id) }}" class="d-inline"
+                onsubmit="return confirm('{{ tr('Delete this BOQ?','حذف هذا الجدول؟') }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('dashboard_boq_index') }}">
+            <button type="submit" class="bq-btn bq-btn--ghost bq-btn--sm" aria-label="{{ tr('Delete','حذف') }}" style="color:var(--bq-danger);">
+              <i class="fa fa-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bq-empty mb-5">
+    <div class="bq-empty__icon"><i class="fa fa-pen-to-square" aria-hidden="true"></i></div>
+    <h3 class="bq-empty__title">{{ tr('No manual BOQs yet', 'لا توجد جداول يدوية بعد') }}</h3>
+    <p class="bq-empty__body">{{ tr('Create a manual BOQ to enter quantities directly.', 'أنشئ جدولاً يدوياً لإدخال الكميات مباشرةً.') }}</p>
+    <div class="bq-empty__cta">
+      <a href="{{ url_for('boq_create_manual') }}" class="bq-btn bq-btn--secondary bq-btn--sm">
+        <i class="fa fa-pen-to-square" aria-hidden="true"></i> {{ tr('Create Manually', 'إنشاء يدوي') }}
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+{% endif %}
+
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,466 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}My Workspace — {{ project.name }}{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+    <div class="project-workspace-hero">
+        <div>
+            <span class="project-code-badge">{{ project.project_code }}</span>
+            <h3 class="mt-2 mb-1">{{ project.name }}</h3>
+            <p class="mb-0">My Workspace / مساحة عملي</p>
+        </div>
+        <div class="project-hero-actions">
+            <a class="btn btn-outline-gold" href="{{ url_for('my_workspace') }}">
+                <i class="fa fa-arrow-left me-2"></i>All Projects
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else ('warning' if cat == 'warning' else 'danger') }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <ul class="nav nav-tabs project-tabs mt-3" id="myWorkspaceTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-boq-pkg" type="button">
+                <i class="fa fa-file-invoice me-1"></i> My BOQ Package / حزمة الكميات
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-materials" type="button">
+                <i class="fa fa-boxes-stacked me-1"></i> My Materials / موادي
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tasks" type="button">
+                <i class="fa fa-list-check me-1"></i> My Tasks / مهامي
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dprs" type="button">
+                <i class="fa fa-clipboard me-1"></i> My DPRs / تقاريري
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+
+        <!-- Tab 1: My BOQ Package -->
+        <div class="tab-pane fade show active" id="tab-boq-pkg">
+            {% if child_boqs %}
+            {# ── New-system child BOQs (source of truth) ── #}
+            {% for boq in child_boqs %}
+            <div class="content-card mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">
+                            {{ boq.trade_section or 'General' }} — {{ boq.title }}
+                        </h6>
+                        <small class="text-muted">
+                            SAR {{ "{:,.2f}".format(boq.grand_total|float) }}
+                            &nbsp;·&nbsp; v{{ boq.version or 1 }}
+                        </small>
+                    </div>
+                    <span class="badge bg-{{ 'warning text-dark' if boq.status == 'revised' else ('success' if boq.status == 'distributed' else 'secondary') }}">
+                        {{ boq.status.title() }}
+                    </span>
+                </div>
+                <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fa fa-eye me-1"></i>View BOQ / عرض الجدول
+                </a>
+                <a href="{{ url_for('boq_revise', boq_id=boq.id) }}" class="btn btn-sm btn-outline-warning ms-2">
+                    <i class="fa fa-pen me-1"></i>Revise / تعديل
+                </a>
+            </div>
+            {% endfor %}
+            {% elif packages %}
+            {# ── Legacy EngineerPackage display ── #}
+            {% for package in packages %}
+            <div class="content-card mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">{{ package.trade or 'General' }} Package</h6>
+                        <small class="text-muted">Value: SAR {{ "{:,.2f}".format(package.package_value or 0) }}</small>
+                    </div>
+                    <span class="badge bg-{{ 'success' if package.status == 'completed' else ('warning' if package.status == 'active' else 'secondary') }}">
+                        {{ package.status.title() }}
+                    </span>
+                </div>
+                <!-- Progress bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Progress / التقدم</small>
+                        <small class="fw-bold" id="progress-pct-{{ package.id }}">{{ package.completion_percentage | round(1) }}%</small>
+                    </div>
+                    <div class="progress" style="height:10px;">
+                        <div class="progress-bar bg-success" id="progress-bar-{{ package.id }}"
+                             style="width: {{ package.completion_percentage }}%;" role="progressbar"></div>
+                    </div>
+                </div>
+
+                {% set items = (package.boq.items_json | from_json | flat_boq_items) if package.boq else [] %}
+                {% set statuses = package.item_statuses %}
+                {% if items %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Description / الوصف</th>
+                                <th>Unit</th>
+                                <th>Qty</th>
+                                <th>Status / الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            {% set idx = loop.index0 %}
+                            {% set current_status = statuses.get(idx|string, 'not_started') %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ item.desc or item.description or item.item_description or '—' }}</td>
+                                <td>{{ item.unit or 'No.' }}</td>
+                                <td>{{ item.quantity or item.qty or '—' }}</td>
+                                <td>
+                                    <select class="form-select form-select-sm item-status-select"
+                                            data-package-id="{{ package.id }}"
+                                            data-item-index="{{ idx }}"
+                                            data-project-id="{{ project.id }}"
+                                            style="width: auto; min-width:130px;">
+                                        {% for status_key, status_label in item_status_labels.items() %}
+                                        <option value="{{ status_key }}" {% if current_status == status_key %}selected{% endif %}>{{ status_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small">No BOQ items linked to this package.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="content-card text-center py-4">
+                <i class="fa fa-file-invoice fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No BOQ sections assigned yet. / لا توجد أقسام كميات مسندة.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab 2: My Materials -->
+        <div class="tab-pane fade" id="tab-materials">
+            {% if not inventory_assignments %}
+            <div class="content-card text-center py-4">
+                <i class="fa fa-boxes-stacked fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No materials allocated to you yet. / لم يتم تخصيص مواد بعد.</p>
+            </div>
+            {% else %}
+            <div class="content-card">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Material / المادة</th>
+                                <th>Category</th>
+                                <th>Allocated Qty / الكمية المخصصة</th>
+                                <th>Unit</th>
+                                <th>Stock Status / حالة المخزون</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ia in inventory_assignments %}
+                            {% set item = ia.inventory_item %}
+                            {% set stock_pct = (item.stock / item.threshold * 100) if item.threshold and item.threshold > 0 else 100 %}
+                            <tr>
+                                <td><strong>{{ item.name }}</strong></td>
+                                <td>{{ item.category or '—' }}</td>
+                                <td>{{ ia.allocated_qty }}</td>
+                                <td>{{ item.unit or '—' }}</td>
+                                <td>
+                                    {% if item.stock == 0 %}
+                                    <span class="badge bg-danger"><i class="fa fa-triangle-exclamation me-1"></i>Critical / حرج</span>
+                                    {% elif item.stock < item.threshold %}
+                                    <span class="badge bg-warning text-dark"><i class="fa fa-exclamation me-1"></i>Low / منخفض</span>
+                                    {% else %}
+                                    <span class="badge bg-success">OK / جيد</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-warning notify-pm-btn"
+                                            data-assignment-id="{{ ia.id }}"
+                                            data-project-id="{{ project.id }}"
+                                            {% if ia.notified_at %}disabled title="Notified {{ ia.notified_at.strftime('%d %b') }}"{% endif %}>
+                                        <i class="fa fa-bell me-1"></i>
+                                        {% if ia.notified_at %}Notified{% else %}Notify PM{% endif %}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab 3: My Tasks -->
+        <div class="tab-pane fade" id="tab-tasks">
+            {% if not tasks %}
+            <div class="content-card text-center py-4">
+                <i class="fa fa-list-check fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No tasks assigned to you yet. / لا توجد مهام مسندة.</p>
+            </div>
+            {% else %}
+            <div class="content-card">
+                {% for task in tasks %}
+                <div class="task-card mb-3 p-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold mb-0">
+                                {% if task.is_private_to_engineer %}
+                                <i class="fa fa-lock text-warning me-1" title="Private / خاص"></i>
+                                {% endif %}
+                                {{ task.title }}
+                            </h6>
+                            <small class="text-muted">
+                                <span class="badge bg-{{ 'danger' if task.priority == 'critical' else ('warning' if task.priority == 'high' else 'secondary') }}">{{ task.priority }}</span>
+                                {{ task.category }}
+                                {% if task.due %} · Due: {{ task.due.strftime('%d %b %Y') }}{% endif %}
+                            </small>
+                        </div>
+                        <select class="form-select form-select-sm task-status-select"
+                                data-task-id="{{ task.id }}"
+                                data-project-id="{{ project.id }}"
+                                style="width:auto;">
+                            {% for sk, sl in task_status_labels.items() %}
+                            <option value="{{ sk }}" {% if task.status == sk %}selected{% endif %}>{{ sl }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if task.description %}
+                    <p class="text-muted small mb-2">{{ task.description }}</p>
+                    {% endif %}
+                    <!-- Engineer Notes (private, never shown to PM) -->
+                    <div class="mt-2">
+                        <label class="form-label small fw-semibold text-warning">
+                            <i class="fa fa-lock me-1"></i>Engineer Notes (Private) / ملاحظات المهندس
+                        </label>
+                        <textarea class="form-control form-control-sm engineer-notes-area"
+                                  data-task-id="{{ task.id }}"
+                                  data-project-id="{{ project.id }}"
+                                  rows="2"
+                                  placeholder="Your private notes... / ملاحظاتك الخاصة...">{{ task.engineer_notes or '' }}</textarea>
+                        <button class="btn btn-sm btn-outline-secondary mt-1 save-notes-btn"
+                                data-task-id="{{ task.id }}"
+                                data-project-id="{{ project.id }}">
+                            <i class="fa fa-save me-1"></i>Save Notes / حفظ الملاحظات
+                        </button>
+                        <small class="text-muted ms-2 notes-saved-msg-{{ task.id }}" style="display:none;">Saved!</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Tab 4: My DPRs -->
+        <div class="tab-pane fade" id="tab-dprs">
+            {% if not dprs %}
+            <div class="content-card text-center py-4">
+                <i class="fa fa-clipboard fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No DPRs submitted yet. / لم يتم رفع أي تقارير.</p>
+                <a href="{{ url_for('dashboard_dpr_new') }}" class="btn btn-gold btn-sm">
+                    <i class="fa fa-plus me-1"></i>New DPR / تقرير جديد
+                </a>
+            </div>
+            {% else %}
+            <div class="content-card">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date / التاريخ</th>
+                                <th>Zone / المنطقة</th>
+                                <th>Weather</th>
+                                <th>Workers</th>
+                                <th>Status</th>
+                                <th>AI Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dpr in dprs %}
+                            <tr>
+                                <td>{{ dpr.date.strftime('%d %b %Y') if dpr.date else '—' }}</td>
+                                <td>{{ dpr.zone or '—' }}</td>
+                                <td>{{ dpr.weather or '—' }}</td>
+                                <td>{{ dpr.workers|length if dpr.workers else '—' }}</td>
+                                <td><span class="badge bg-success">{{ dpr.status }}</span></td>
+                                <td>
+                                    {% if dpr.ai_summary %}
+                                    <span class="text-muted small">{{ dpr.ai_summary[:60] }}{% if dpr.ai_summary|length > 60 %}...{% endif %}</span>
+                                    {% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div><!-- tab-content -->
+</div><!-- project-page -->
+
+<script>
+// Item status AJAX update
+document.querySelectorAll('.item-status-select').forEach(function(sel) {
+    sel.addEventListener('change', function() {
+        var packageId = this.dataset.packageId;
+        var itemIndex = this.dataset.itemIndex;
+        var projectId = this.dataset.projectId;
+        var newStatus = this.value;
+        var csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
+
+        // Try to get CSRF from form or cookie
+        var fd = new FormData();
+        fd.append('status', newStatus);
+        // Get CSRF token from cookie
+        var cookies = document.cookie.split(';');
+        for (var c of cookies) {
+            var parts = c.trim().split('=');
+            if (parts[0] === 'csrf_token') { csrfToken = parts[1]; break; }
+        }
+        fd.append('csrf_token', '{{ csrf_token() }}');
+
+        fetch('/my-workspace/' + projectId + '/boq/' + packageId + '/items/' + itemIndex + '/status', {
+            method: 'POST',
+            body: fd,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var pct = parseFloat(data.package_completion_percentage).toFixed(1);
+                var pctEl = document.getElementById('progress-pct-' + packageId);
+                var barEl = document.getElementById('progress-bar-' + packageId);
+                if (pctEl) pctEl.textContent = pct + '%';
+                if (barEl) barEl.style.width = pct + '%';
+            }
+        })
+        .catch(function(e) { console.error('Status update failed', e); });
+    });
+});
+
+// Notify PM button
+document.querySelectorAll('.notify-pm-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var assignmentId = this.dataset.assignmentId;
+        var projectId = this.dataset.projectId;
+        var btn = this;
+        var fd = new FormData();
+        fd.append('csrf_token', '{{ csrf_token() }}');
+        fetch('/my-workspace/' + projectId + '/inventory/' + assignmentId + '/notify', {
+            method: 'POST',
+            body: fd,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                btn.disabled = true;
+                btn.textContent = 'Notified ✓';
+                btn.classList.remove('btn-outline-warning');
+                btn.classList.add('btn-secondary');
+            }
+        })
+        .catch(function(e) { console.error('Notify failed', e); });
+    });
+});
+
+// Save engineer notes
+document.querySelectorAll('.save-notes-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var taskId = this.dataset.taskId;
+        var projectId = this.dataset.projectId;
+        var textarea = document.querySelector('.engineer-notes-area[data-task-id="' + taskId + '"]');
+        var msgEl = document.querySelector('.notes-saved-msg-' + taskId);
+        var fd = new FormData();
+        fd.append('engineer_notes', textarea ? textarea.value : '');
+        fd.append('csrf_token', '{{ csrf_token() }}');
+        fetch('/my-workspace/' + projectId + '/tasks/' + taskId + '/notes', {
+            method: 'POST',
+            body: fd,
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && msgEl) {
+                msgEl.style.display = 'inline';
+                setTimeout(function() { msgEl.style.display = 'none'; }, 2000);
+            }
+        })
+        .catch(function(e) { console.error('Notes save failed', e); });
+    });
+});
+
+// Task status AJAX update
+document.querySelectorAll('.task-status-select').forEach(function(sel) {
+    sel.dataset.previousValue = sel.value;
+    sel.addEventListener('change', function() {
+        var selectEl = this;
+        var previousValue = selectEl.dataset.previousValue || selectEl.value;
+        var taskId = selectEl.dataset.taskId;
+        var projectId = selectEl.dataset.projectId;
+        var fd = new FormData();
+        fd.append('status', selectEl.value);
+        fd.append('csrf_token', '{{ csrf_token() }}');
+        selectEl.disabled = true;
+        fetch('/my-workspace/' + projectId + '/tasks/' + taskId + '/status', {
+            method: 'POST',
+            body: fd,
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Status update failed');
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data.success) throw new Error('Status update failed');
+            selectEl.dataset.previousValue = selectEl.value;
+            selectEl.classList.remove('is-invalid');
+        })
+        .catch(function(e) {
+            console.error('Task status update failed', e);
+            selectEl.value = previousValue;
+            selectEl.classList.add('is-invalid');
+            setTimeout(function() { selectEl.classList.remove('is-invalid'); }, 2200);
+        })
+        .finally(function() {
+            selectEl.disabled = false;
+        });
+    });
+});
+
+// Keep workspace tabs stable across refresh/back navigation.
+document.addEventListener('DOMContentLoaded', function() {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('#myWorkspaceTabs [data-bs-toggle="tab"]'));
+    var hash = window.location.hash;
+    var initial = hash ? tabs.find(function(tab) { return tab.getAttribute('data-bs-target') === hash; }) : null;
+    if (initial && window.bootstrap) {
+        new bootstrap.Tab(initial).show();
+    }
+    tabs.forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function() {
+            var target = tab.getAttribute('data-bs-target');
+            if (target) history.replaceState(null, '', target);
+        });
+    });
+});
+</script>
+{% endblock %}

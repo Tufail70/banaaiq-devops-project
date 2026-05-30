@@ -1,0 +1,29 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Last chance — your BanaaIQ trial ends tomorrow' %}
+{% block content %}
+<h1>Your trial ends tomorrow</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>This is your final reminder: your BanaaIQ free trial expires
+   <strong>tomorrow</strong>.</p>
+<p>To keep uninterrupted access to your DPRs, BOQs, inventory, tasks,
+   and AI workflows, activate a plan today.</p>
+
+<div class="cta-wrap">
+  <a class="btn" href="{{ url_for('pricing', _external=True) }}">Activate now</a>
+</div>
+
+<p class="muted">If you're not ready to subscribe, your data will be safely
+   stored for 30 days after trial expiry — you won't lose anything.</p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>تجربتك تنتهي غداً</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>هذا تذكيرك الأخير: تنتهي تجربتك المجانية في BanaaIQ <strong>غداً</strong>.</p>
+  <p>للحفاظ على الوصول المتواصل إلى التقارير اليومية وجداول الكميات والمخزون
+     والمهام وسير عمل الذكاء الاصطناعي، فعّل خطة اليوم.</p>
+  <p class="muted">إذا لم تكن مستعداً للاشتراك، ستُحفظ بياناتك بأمان لمدة
+     30 يوماً بعد انتهاء التجربة.</p>
+</div>
+{% endblock %}

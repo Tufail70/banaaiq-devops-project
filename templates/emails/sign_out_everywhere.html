@@ -1,0 +1,22 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Signed out everywhere — BanaaIQ' %}
+{% block content %}
+<h1>Signed out everywhere</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>All active BanaaIQ sessions on other devices were signed out at your request.
+   Your current session remains active.</p>
+<p>If you did not request this, your account may be compromised. Please
+   <a href="{{ url_for('auth_forgot', _external=True) }}" style="color:#1d4e89;">reset your password immediately</a>
+   and contact us.</p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>تم تسجيل الخروج من كل مكان</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>تم تسجيل الخروج من جميع جلسات BanaaIQ النشطة على الأجهزة الأخرى بناءً على طلبك.
+     جلستك الحالية لا تزال نشطة.</p>
+  <p>إذا لم تطلب ذلك، قد يكون حسابك مخترقاً.
+     يُرجى إعادة تعيين كلمة المرور فوراً والتواصل معنا.</p>
+</div>
+{% endblock %}

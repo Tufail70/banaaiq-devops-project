@@ -1,0 +1,596 @@
+﻿<!DOCTYPE html>
+<html
+  lang="{{ session.get('lang', 'en') }}"
+  dir="{{ 'rtl' if session.get('lang') == 'ar' else 'ltr' }}"
+>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% if current_user.is_authenticated and not session.get('is_guest') %}
+    <meta name="user-authenticated" content="1">
+    {% endif %}
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <title>{% block title %}BanaaIQ{% endblock %}</title>
+    <meta
+      name="description"
+      content="{% block meta_description %}BanaaIQ helps construction teams streamline multilingual reporting, inventory, tasks, and project coordination.{% endblock %}"
+    >
+    <!-- STEP 1: Font Awesome (always first) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    >
+
+    <style>
+    /* ═══════════════════════════════════════════
+       FONT AWESOME ICON PROTECTION
+       Must be after FA link, before any other CSS
+       ═══════════════════════════════════════════ */
+
+    /* Protect all Font Awesome variations */
+    .fa, .fas, .far, .fab, .fal, .fad, .fat,
+    i[class*="fa-"],
+    span[class*="fa-"],
+    button[class*="fa-"],
+    [class^="fa-"],
+    [class*=" fa-"] {
+      font-family: "Font Awesome 6 Free",
+                   "Font Awesome 6 Brands",
+                   "Font Awesome 5 Free",
+                   "Font Awesome 5 Brands",
+                   FontAwesome !important;
+      font-weight: 900 !important;
+      font-style: normal !important;
+      font-variant: normal !important;
+      text-transform: none !important;
+      line-height: 1 !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+      speak: never !important;
+    }
+
+    /* Extra protection in RTL mode */
+    html[dir="rtl"] .fa,
+    html[dir="rtl"] .fas,
+    html[dir="rtl"] .far,
+    html[dir="rtl"] .fab,
+    html[dir="rtl"] .fal,
+    html[dir="rtl"] i[class*="fa-"],
+    html[dir="rtl"] span[class*="fa-"],
+    html[dir="rtl"] [class^="fa-"],
+    html[dir="rtl"] [class*=" fa-"] {
+      font-family: "Font Awesome 6 Free",
+                   "Font Awesome 6 Brands",
+                   "Font Awesome 5 Free",
+                   "Font Awesome 5 Brands",
+                   FontAwesome !important;
+      font-weight: 900 !important;
+      font-style: normal !important;
+    }
+
+    /* RTL text elements get Cairo font */
+    /* ONLY specific text tags — NOT icons */
+    html[dir="rtl"] p,
+    html[dir="rtl"] h1,
+    html[dir="rtl"] h2,
+    html[dir="rtl"] h3,
+    html[dir="rtl"] h4,
+    html[dir="rtl"] h5,
+    html[dir="rtl"] h6,
+    html[dir="rtl"] span:not([class*="fa"]),
+    html[dir="rtl"] a:not([class*="fa"]),
+    html[dir="rtl"] label,
+    html[dir="rtl"] td,
+    html[dir="rtl"] th,
+    html[dir="rtl"] li,
+    html[dir="rtl"] input,
+    html[dir="rtl"] textarea,
+    html[dir="rtl"] select,
+    html[dir="rtl"] .card-title,
+    html[dir="rtl"] .card-text,
+    html[dir="rtl"] .card-body,
+    html[dir="rtl"] .nav-link:not([class*="fa"]),
+    html[dir="rtl"] .dropdown-item,
+    html[dir="rtl"] .form-label,
+    html[dir="rtl"] .form-text,
+    html[dir="rtl"] .alert,
+    html[dir="rtl"] .toast-body,
+    html[dir="rtl"] .modal-title,
+    html[dir="rtl"] .modal-body,
+    html[dir="rtl"] .badge:not([class*="fa"]),
+    html[dir="rtl"] .sidebar-link span,
+    html[dir="rtl"] .btn span,
+    html[dir="rtl"] small,
+    html[dir="rtl"] strong,
+    html[dir="rtl"] em {
+      font-family: 'Cairo', sans-serif;
+    }
+
+    /* ARABIC FONT FORCE */
+    html[dir="rtl"] .navbar,
+    html[dir="rtl"] .navbar *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .nav-link,
+    html[dir="rtl"] .navbar-brand span,
+    html[dir="rtl"] footer,
+    html[dir="rtl"] footer *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .footer-link,
+    html[dir="rtl"] .hero-section,
+    html[dir="rtl"] .hero-section *:not(i),
+    html[dir="rtl"] .card,
+    html[dir="rtl"] .card *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .btn:not([class*="fa"]),
+    html[dir="rtl"] .dashboard-content,
+    html[dir="rtl"] .dashboard-content *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .dashboard-main,
+    html[dir="rtl"] .dashboard-main *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .stat-card,
+    html[dir="rtl"] .stat-card *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .sidebar *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .topbar *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .main-content,
+    html[dir="rtl"] .main-content *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .notification-item,
+    html[dir="rtl"] .notification-item *:not(i):not([class*="fa"]),
+    html[dir="rtl"] table *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .modal *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .dropdown-menu *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .blog-card *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .contact-section *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .about-section *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .tutorials-section *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .accordion *:not(i):not([class*="fa"]),
+    html[dir="rtl"] .tab-content *:not(i):not([class*="fa"]),
+    html[dir="rtl"] p,
+    html[dir="rtl"] h1, html[dir="rtl"] h2,
+    html[dir="rtl"] h3, html[dir="rtl"] h4,
+    html[dir="rtl"] h5, html[dir="rtl"] h6,
+    html[dir="rtl"] span:not([class*="fa"]),
+    html[dir="rtl"] a:not([class*="fa"]),
+    html[dir="rtl"] label,
+    html[dir="rtl"] li,
+    html[dir="rtl"] td, html[dir="rtl"] th,
+    html[dir="rtl"] input,
+    html[dir="rtl"] textarea,
+    html[dir="rtl"] select,
+    html[dir="rtl"] small,
+    html[dir="rtl"] strong,
+    html[dir="rtl"] em,
+    html[dir="rtl"] div:not([class*="fa"]) {
+      font-family: 'Cairo', sans-serif !important;
+    }
+
+    html[dir="rtl"] i,
+    html[dir="rtl"] i.fa,
+    html[dir="rtl"] i.fas,
+    html[dir="rtl"] i.far,
+    html[dir="rtl"] i.fab,
+    html[dir="rtl"] i.fal,
+    html[dir="rtl"] i[class*="fa-"],
+    html[dir="rtl"] [class^="fa-"],
+    html[dir="rtl"] [class*=" fa-"],
+    i.fa, i.fas, i.far, i.fab,
+    i[class*="fa-"],
+    [class^="fa-"],
+    [class*=" fa-"] {
+      font-family: "Font Awesome 6 Free",
+                   "Font Awesome 6 Brands",
+                   "Font Awesome 5 Free",
+                   FontAwesome !important;
+      font-weight: 900 !important;
+      font-style: normal !important;
+    }
+
+    html[dir="rtl"] body {
+      font-family: 'Cairo', 'Arial Unicode MS', 'Tahoma', 'Arial', sans-serif !important;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .site-footer--global {
+      background:
+        radial-gradient(circle at top left, rgba(245,158,11,0.16), transparent 24%),
+        linear-gradient(180deg, #081321 0%, #0d1b3e 62%, #101f49 100%);
+      color: rgba(255,255,255,0.82);
+    }
+    .site-footer--global .footer-brand {
+      color: #ffffff;
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .site-footer--global .footer-tagline {
+      color: rgba(255,255,255,0.68);
+      font-size: 0.94rem;
+      line-height: 1.7;
+      max-width: 320px;
+    }
+    .site-footer--global .footer-title {
+      color: #ffffff;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .site-footer--global .footer-link,
+    .site-footer--global .footer-social {
+      display: block;
+      color: rgba(255,255,255,0.72);
+      text-decoration: none;
+      margin-bottom: 0.72rem;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .site-footer--global .footer-link:hover,
+    .site-footer--global .footer-social:hover {
+      color: #F59E0B;
+      transform: translateX(3px);
+    }
+    .site-footer--global .footer-market-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 10px 10px 0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #ffffff;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+    .site-footer--global .footer-contact-line {
+      color: rgba(255,255,255,0.72);
+      margin-bottom: 0.7rem;
+      line-height: 1.7;
+    }
+    .site-footer--global .footer-divider {
+      border-color: rgba(255,255,255,0.12);
+      margin: 2rem 0 1rem;
+    }
+    .site-footer--global .footer-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.62);
+    }
+    .site-footer--global .footer-legal-list {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .site-footer--global .footer-legal-list a {
+      color: rgba(255,255,255,0.66);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .site-footer--global .footer-legal-list a:hover {
+      color: #F59E0B;
+    }
+    @media (max-width: 767.98px) {
+      .site-footer--global .footer-bottom-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+    </style>
+
+    <!-- STEP 2: Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    >
+
+    <!-- STEP 3: Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
+
+    {% if is_arabic %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/rtl.css') }}">
+    {% endif %}
+
+    <!-- STEP 4: Your CSS (always last) -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    >
+</head>
+<body class="{{ 'lang-ar' if is_arabic else 'lang-en' }} {% block body_class %}{% endblock %}">
+{% block site_nav %}
+<nav class="navbar navbar-expand-lg sticky-top app-navbar">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">BanaaIQ | بناء IQ</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">{{ 'الرئيسية' if is_arabic else 'Home' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('features') }}">{{ 'المميزات' if is_arabic else 'Features' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard_overview') }}">{{ 'لوحة التحكم' if is_arabic else 'Dashboard' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('tutorials') }}">{{ 'الدروس' if is_arabic else 'Tutorials' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('blog_index') }}">{{ 'المدونة' if is_arabic else 'Blog' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">{{ 'من نحن' if is_arabic else 'About' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('contact') }}">{{ 'اتصل بنا' if is_arabic else 'Contact' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing') }}">Pricing</a></li>
+            </ul>
+            {% set has_dashboard_access = current_user.is_authenticated or session.get('is_guest') %}
+            {% if current_user.is_authenticated %}
+                {% set nav_full_name = current_user.full_name or current_user.email or 'User' %}
+            {% elif session.get('is_guest') %}
+                {% set nav_full_name = session.get('guest_name', 'Guest User') %}
+            {% else %}
+                {% set nav_full_name = 'User' %}
+            {% endif %}
+            {% set nav_first_name = nav_full_name.split()[0] if nav_full_name else 'User' %}
+	            <div class="d-flex align-items-center gap-2 auth-actions">
+	                {% if has_dashboard_access %}
+	                {% if current_user.is_authenticated %}
+	                <div class="dropdown">
+	                    <button class="btn btn-sm btn-outline-gold position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+	                        <i class="fa fa-bell"></i>
+	                        {% if unread_count and unread_count > 0 %}
+	                        <span class="global-notif-badge">{{ unread_count }}</span>
+	                        {% endif %}
+	                    </button>
+	                    <div class="dropdown-menu dropdown-menu-end global-notification-menu">
+	                        <div class="global-notification-head">
+	                            <strong>Notifications</strong>
+	                            <button class="btn btn-sm btn-link p-0" type="button" onclick="fetch('/api/notifications/read-all', {method:'POST'}).then(() => window.location.reload())">Mark all read</button>
+	                        </div>
+	                        {% for notif in notifications[:5] %}
+	                        <a class="dropdown-item global-notification-item {{ 'unread' if not notif.read else '' }}" href="{{ notif.link or url_for('dashboard_overview') }}">
+	                            <span>{{ notif.title }}</span>
+	                            <small>{{ notif.message }}</small>
+	                        </a>
+	                        {% else %}
+	                        <div class="dropdown-item text-muted small">No notifications yet</div>
+	                        {% endfor %}
+	                    </div>
+	                </div>
+	                {% endif %}
+	                <div class="user-avatar-circle">
+	                    {{ nav_full_name[0].upper() if nav_full_name else 'U' }}
+	                </div>
+                <span class="user-name-display d-none d-md-inline">
+                    {{ nav_first_name }}
+                </span>
+                <form method="post" action="{{ url_for('auth_logout') }}" class="d-inline ms-md-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-gold btn-sm">Logout</button>
+                </form>
+                {% else %}
+                <a class="btn btn-sm btn-outline-gold" href="{{ url_for('auth_login') }}">{{ 'تسجيل الدخول' if is_arabic else 'Login' }}</a>
+	                <a class="btn btn-sm btn-gold" href="{{ url_for('pricing') }}">{{ 'ابدأ التجربة' if is_arabic else 'Start Trial' }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock site_nav %}
+
+{% block trial_banner %}
+{% if current_user.is_authenticated and current_user.subscription %}
+    {% set sub = current_user.subscription %}
+    {% set banner_status = current_subscription_status or sub.status %}
+    {% if banner_status == 'trialing' %}
+        {% set days_left = (sub.trial_end - now).days if sub.trial_end else 0 %}
+        <div class="bq-trial-banner">
+            <span class="dot" aria-hidden="true"></span>
+            <span>BanaaIQ trial: <strong>{{ days_left if days_left > 0 else 0 }} days remaining</strong> on {{ sub.plan.display_name }}</span>
+            <a href="{{ url_for('pricing') }}">Review Plans</a>
+        </div>
+    {% elif banner_status == 'expired' %}
+        <div class="bq-trial-banner bq-trial-banner--expired">
+            <span class="dot" aria-hidden="true"></span>
+            <span>Trial workspace paused &mdash; project data stays safe.</span>
+            <a href="{{ url_for('pricing') }}">View Plans</a>
+        </div>
+    {% elif banner_status == 'past_due' %}
+        <div class="bq-trial-banner bq-trial-banner--expired">
+            <span class="dot" aria-hidden="true"></span>
+            <span>Billing attention required &mdash; update payment details.</span>
+            <a href="{{ url_for('dashboard_overview') }}">Open Command Center</a>
+        </div>
+    {% endif %}
+{% endif %}
+{% endblock trial_banner %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="container mt-3">
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endwith %}
+
+<main class="site-main" id="main-content">
+{% block content %}{% endblock %}
+</main>
+
+<footer id="site-footer" class="site-footer site-footer--global">
+    <div class="container py-5">
+        <div class="footer-command-panel">
+            <div>
+                <a href="{{ url_for('index') }}" class="footer-brand">
+                    <span class="footer-brand-mark"><i class="fa-solid fa-building-shield"></i></span>
+                    <span>BanaaIQ | &#1576;&#1606;&#1575;&#1569; IQ</span>
+                </a>
+                <p class="footer-tagline mt-3 mb-0">
+                    AI-powered construction control for DPRs, BOQs, inventory, tasks, translation, and executive project visibility.
+                </p>
+            </div>
+            <div class="footer-command-actions">
+                <a class="btn btn-gold" href="{{ url_for('pricing') }}">Review Plans</a>
+                <a class="footer-secondary-cta" href="{{ url_for('contact') }}">Talk to BanaaIQ</a>
+            </div>
+        </div>
+
+        <div class="row g-4 footer-link-grid">
+            <div class="col-lg-4">
+                <div class="footer-title">Built For</div>
+                <div class="footer-chip-wrap">
+                    <span class="footer-market-chip"><i class="fa-solid fa-location-dot"></i> Saudi Arabia</span>
+                    <span class="footer-market-chip"><i class="fa-solid fa-location-dot"></i> India</span>
+                    <span class="footer-market-chip"><i class="fa-solid fa-language"></i> Arabic-English</span>
+                    <span class="footer-market-chip"><i class="fa-solid fa-robot"></i> AI workflows</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="footer-title">Platform</div>
+                <a class="footer-link" href="{{ url_for('features') }}">Modules</a>
+                <a class="footer-link" href="{{ url_for('dashboard_overview') }}">Dashboard</a>
+                <a class="footer-link" href="{{ url_for('tutorials') }}">Tutorials</a>
+                <a class="footer-link" href="{{ url_for('pricing') }}">Pricing</a>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="footer-title">Company</div>
+                <a class="footer-link" href="{{ url_for('about') }}">About</a>
+                <a class="footer-link" href="{{ url_for('blog_index') }}">Blog</a>
+                <a class="footer-link" href="{{ url_for('contact') }}">Contact</a>
+                <a class="footer-link" href="{{ url_for('auth_login') }}">Login</a>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="footer-title">Legal</div>
+                <a class="footer-link" href="{{ url_for('privacy_policy') }}">Privacy Policy</a>
+                <a class="footer-link" href="{{ url_for('terms_of_service') }}">Terms of Service</a>
+                <a class="footer-link" href="{{ url_for('data_ai_disclosure') }}">Data &amp; AI</a>
+                <a class="footer-link" href="{{ url_for('data_ai_disclosure') }}#beta">Beta Agreement</a>
+            </div>
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="footer-title">Contact</div>
+                <div class="footer-contact-line"><i class="fa-solid fa-headset"></i> Riyadh and India support</div>
+                <div class="footer-contact-line"><i class="fa-solid fa-clock"></i> Field-team coordination</div>
+                <a class="footer-link footer-mail-link" href="mailto:iqbaana@gmail.com">iqbaana@gmail.com</a>
+            </div>
+        </div>
+
+        <div class="footer-bottom-row">
+            <div>&copy; {{ now.year if now is defined else 2026 }} BanaaIQ. All rights reserved.</div>
+            <div class="footer-legal-list">
+                <a href="{{ url_for('privacy_policy') }}">Privacy</a>
+                <a href="{{ url_for('terms_of_service') }}">Terms</a>
+                <a href="{{ url_for('data_ai_disclosure') }}">AI Disclosure</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+window.BANAAIQ_CSRF_TOKEN = {{ csrf_token()|tojson }};
+
+(function () {
+  const csrfToken = window.BANAAIQ_CSRF_TOKEN || '';
+
+  function isUnsafeMethod(method) {
+    return ['POST', 'PUT', 'PATCH', 'DELETE'].includes((method || 'GET').toUpperCase());
+  }
+
+  function isSameOrigin(url) {
+    try {
+      return new URL(url, window.location.origin).origin === window.location.origin;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function ensureFormTokens() {
+    if (!csrfToken) return;
+    document.querySelectorAll('form').forEach((form) => {
+      const method = (form.getAttribute('method') || 'GET').toUpperCase();
+      if (method === 'GET' || form.querySelector('input[name="csrf_token"]')) {
+        return;
+      }
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'csrf_token';
+      input.value = csrfToken;
+      form.prepend(input);
+    });
+  }
+
+  function submitLogoutPost() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = {{ url_for('auth_logout')|tojson }};
+    form.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csrf_token';
+    input.value = csrfToken;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  const originalFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (originalFetch) {
+    window.fetch = function(resource, init = {}) {
+      const request = resource instanceof Request ? resource : null;
+      const url = request ? request.url : String(resource);
+      const method = (
+        init.method
+        || (request ? request.method : 'GET')
+      ).toUpperCase();
+
+      if (!csrfToken || !isUnsafeMethod(method) || !isSameOrigin(url)) {
+        return originalFetch(resource, init);
+      }
+
+      const headers = new Headers(request ? request.headers : undefined);
+      if (init.headers) {
+        new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+      }
+      if (!headers.has('X-CSRFToken')) {
+        headers.set('X-CSRFToken', csrfToken);
+      }
+
+      return originalFetch(resource, {
+        ...init,
+        credentials: init.credentials || 'same-origin',
+        headers,
+      });
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureFormTokens);
+  } else {
+    ensureFormTokens();
+  }
+
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href]');
+    if (!link || !csrfToken) return;
+    const url = new URL(link.href, window.location.origin);
+    if (url.origin === window.location.origin && url.pathname === {{ url_for('auth_logout')|tojson }}) {
+      event.preventDefault();
+      submitLogoutPost();
+    }
+  });
+})();
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+window.GOOGLE_CLIENT_ID = {{ config.get('GOOGLE_CLIENT_ID', '')|tojson }};
+window.LINKEDIN_CLIENT_ID = {{ config.get('LINKEDIN_CLIENT_ID', '')|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/social-auth.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

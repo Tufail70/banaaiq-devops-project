@@ -1,0 +1,29 @@
+{% extends 'emails/_layout.html' %}
+{% set subject = 'Welcome to BanaaIQ' %}
+{% block content %}
+<h1>Welcome to BanaaIQ</h1>
+<p>Hi {{ user.full_name or user.email }},</p>
+<p>Your account is ready. BanaaIQ gives construction teams in the GCC a single
+   command center for daily progress reports, bill of quantities, inventory,
+   and task coordination — bilingual EN + AR throughout.</p>
+<p>Choose a plan to activate your workspace and start a free 14-day trial with
+   full access to all features.</p>
+
+<div class="cta-wrap">
+  <a class="btn" href="{{ url_for('pricing', _external=True) }}">View plans &amp; start trial</a>
+</div>
+
+<p class="muted">Already chose a plan? Open your
+   <a href="{{ url_for('dashboard_overview', _external=True) }}" style="color:#1d4e89;">command center</a>
+   to get started.</p>
+
+<hr class="divider">
+
+<div class="ar">
+  <h1>مرحباً بك في BanaaIQ</h1>
+  <p>مرحباً {{ user.full_name or user.email }}،</p>
+  <p>حسابك جاهز الآن. يمنح BanaaIQ فرق البناء في دول الخليج مركزاً موحداً
+     لتقارير التقدم اليومية وجداول الكميات والمخزون وتنسيق المهام — بالعربية والإنجليزية.</p>
+  <p>اختر خطة لتفعيل مساحة العمل الخاصة بك وابدأ تجربة مجانية لمدة 14 يوماً.</p>
+</div>
+{% endblock %}

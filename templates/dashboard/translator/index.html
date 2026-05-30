@@ -1,0 +1,226 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<style>
+.lang-card { cursor:pointer; border:2px solid #dee2e6; border-radius:8px; transition:.2s ease; }
+.lang-card.selected { border-color:#F59E0B; background:#fff9e8; }
+.input-tab-btn.active { background:#F59E0B; color:#fff; border-color:#F59E0B; }
+#results-panel { display:none; animation:fadeDown .25s ease; }
+@keyframes fadeDown { from { opacity:0; transform:translateY(-8px);} to {opacity:1; transform:none;} }
+.phrase-collapse-btn[aria-expanded="true"] i { transform:rotate(180deg); }
+</style>
+
+<div class="content-card p-4">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h4 class="mb-1">{{ tr("Smart Translator", "المترجم الذكي") }}</h4>
+      <p class="text-muted mb-0">{{ tr("Translate voice messages and text — get summaries and suggested replies", "ترجمة الرسائل الصوتية والنصية مع ملخصات وردود مقترحة") }}</p>
+    </div>
+    <span id="ai-calls-counter" class="badge bg-dark">
+      {% if ai_quota.unlimited %}
+      AI Queries: Unlimited
+      {% elif ai_quota.limit %}
+      AI Queries: {{ ai_quota.used }}/{{ ai_quota.limit }}
+      {% else %}
+      AI Queries: Start a free trial
+      {% endif %}
+    </span>
+  </div>
+
+  <form id="translator-form" method="post" action="#" onsubmit="return false;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="border rounded p-3 mb-3" style="border-top:4px solid #F59E0B !important;">
+    <h6 class="mb-3">Step 1: Setup Your Language</h6>
+    <div class="row g-3 align-items-start">
+      <div class="col-lg-6">
+        <label class="form-label fw-semibold">I speak:</label>
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="lang-card p-3 text-center" data-lang="English" onclick="selectPrimaryLang('English')">
+              <div style="font-size:1.8rem;">🇬🇧</div>
+              <div class="fw-semibold">English</div>
+              <small class="text-muted">Speaker</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="lang-card p-3 text-center" data-lang="Arabic" onclick="selectPrimaryLang('Arabic')">
+              <div style="font-size:1.8rem;">🇸🇦</div>
+              <div class="fw-semibold">العربية</div>
+              <small class="text-muted">Arabic Speaker</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <label class="form-label fw-semibold">I want translation in:</label>
+        <select id="output-lang-select" class="form-select" onchange="onOutputLangChange()">
+          <option value="Arabic">Arabic - العربية</option>
+          <option value="English">English</option>
+        </select>
+        <small class="text-warning fst-italic d-block mt-2">Translation, summary and reply suggestions will be in your selected output language</small>
+      </div>
+    </div>
+    <div id="setup-complete-indicator" class="mt-2 text-success" style="display:none;">✓ Setup complete</div>
+  </div>
+
+  <div class="mb-3">
+    <h6 class="mb-2">Step 2: Choose Input Type</h6>
+    <div class="d-flex gap-2 mb-3">
+      <button class="btn btn-outline-primary input-tab-btn active" data-tab="voice" onclick="switchTab('voice')" type="button"><i class="fa fa-microphone me-2"></i>Voice Message</button>
+      <button class="btn btn-outline-primary input-tab-btn" data-tab="text" onclick="switchTab('text')" type="button"><i class="fa fa-message me-2"></i>Text Message</button>
+    </div>
+
+    <div id="tab-voice">
+      <input id="audio-file-input" type="file" class="d-none" accept=".mp3,.wav,.m4a,.ogg,.webm,.mp4">
+      <div id="audio-drop-zone" class="border rounded text-center p-4" style="min-height:200px; border-style:dashed !important; border-color:#F59E0B;">
+        <div style="font-size:2rem; color:#F59E0B;"><i class="fa fa-microphone-lines"></i></div>
+        <h6 class="mt-2 mb-1">Upload Voice Message</h6>
+        <p class="text-muted mb-2">Supports: MP3, WAV, M4A, OGG, WEBM<br>Maximum size: 25MB</p>
+        <button class="btn btn-outline-warning" type="button">Choose File</button>
+      </div>
+
+      <div id="audio-file-info" class="border rounded p-3 mt-2" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div><i class="fa fa-wave-square me-2 text-warning"></i><strong class="audio-filename"></strong><br><small class="text-muted">Size: <span class="audio-filesize"></span> | Ready to transcribe</small></div>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeAudioFile()" type="button"><i class="fa fa-xmark me-1"></i>Remove</button>
+        </div>
+        <audio id="audio-preview-player" controls class="w-100 mt-2" style="display:none;"></audio>
+      </div>
+
+      <div id="processing-steps" class="border rounded p-3 mt-2" style="display:none;">
+        <div class="proc-step mb-2"><span class="spinner-border spinner-border-sm proc-spinner me-2 d-none"></span><span class="proc-check d-none me-2">✓</span>Uploading audio file...</div>
+        <div class="proc-step mb-2"><span class="spinner-border spinner-border-sm proc-spinner me-2 d-none"></span><span class="proc-check d-none me-2">✓</span>Transcribing speech with Whisper AI...</div>
+        <div class="proc-step mb-2"><span class="spinner-border spinner-border-sm proc-spinner me-2 d-none"></span><span class="proc-check d-none me-2">✓</span>Translating content...</div>
+        <div class="proc-step"><span class="spinner-border spinner-border-sm proc-spinner me-2 d-none"></span><span class="proc-check d-none me-2">✓</span>Generating reply suggestions...</div>
+      </div>
+
+      <button id="btn-translate-voice" class="btn btn-gold w-100 mt-3" onclick="translateVoice()" disabled type="button">
+        <i class="fas fa-robot me-2"></i>Transcribe & Translate Voice
+      </button>
+    </div>
+
+    <div id="tab-text" style="display:none;">
+      <textarea id="text-input" class="form-control" rows="10" dir="auto" maxlength="3000" placeholder="Paste or type the message to translate..."></textarea>
+      <div class="text-end"><small id="char-counter" class="text-muted">0 / 3000</small></div>
+      <button id="btn-translate-text" class="btn btn-gold w-100 mt-2" onclick="translateText()" disabled type="button">
+        <i class="fas fa-language me-2"></i>Translate & Analyze
+      </button>
+    </div>
+  </div>
+  </form>
+
+  <div id="results-panel" class="mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">Translation Results</h6>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" onclick="hideResults()" type="button">Clear Results</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="copyAllResults()" type="button">Copy All</button>
+      </div>
+    </div>
+
+    <div class="border rounded p-3 mb-2" style="border-left:4px solid #0B3C5D !important;">
+      <div class="d-flex justify-content-between mb-2">
+        <strong><i class="fas fa-file-lines me-1"></i>Original Text</strong>
+        <div><span class="badge bg-secondary" id="input-type-badge"></span> <span class="badge bg-warning text-dark" id="detected-lang-badge"></span></div>
+      </div>
+      <div id="result-original-text" class="bg-light rounded p-2" dir="auto"></div>
+      <button class="btn btn-sm btn-outline-secondary mt-2" onclick="copyText('result-original-text')" type="button">Copy</button>
+    </div>
+
+    <div class="border rounded p-3 mb-2" style="border-left:4px solid #F59E0B !important;">
+      <div class="d-flex justify-content-between mb-2">
+        <strong><i class="fas fa-language me-1"></i>Translation</strong>
+        <span class="badge bg-dark" id="translated-to-badge"></span>
+      </div>
+      <div id="result-translation" class="bg-light rounded p-2"></div>
+      <button class="btn btn-sm btn-outline-secondary mt-2" onclick="copyText('result-translation')" type="button">Copy</button>
+    </div>
+
+    <div class="border rounded p-3 mb-2" style="border-left:4px solid #28a745 !important; background:#f0fff4;">
+      <strong><i class="fas fa-list-check me-1"></i>What This Says</strong>
+      <p id="result-summary" class="mb-2 mt-2" dir="auto"></p>
+      <div id="key-action-box" class="alert alert-warning py-2 mb-0" style="display:none;">
+        ⚡ <strong>Action Required:</strong> <span id="key-action-text"></span>
+      </div>
+    </div>
+
+    <div class="border rounded p-3 mb-2" style="border-left:4px solid #0d6efd !important;">
+      <strong><i class="fas fa-reply me-1"></i>Suggested Replies</strong>
+      <small class="text-muted d-block mb-2">Tap any reply to copy it</small>
+      <div id="replies-container"></div>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <button class="btn btn-outline-secondary phrase-collapse-btn" data-bs-toggle="collapse" data-bs-target="#phrase-library" aria-expanded="false" type="button">
+      📚 Construction Phrase Library <i class="fas fa-chevron-down ms-1"></i>
+    </button>
+    <div id="phrase-library" class="collapse mt-2">
+      <input id="phrase-search" class="form-control mb-2" placeholder="Search in English or Arabic...">
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        {% for c in ['All','Contracts','Personnel','Materials','Civil','Finance','QA/QC','HSE','Safety','Reports','Engineering','Planning'] %}
+        <button class="btn btn-sm btn-outline-secondary category-badge {% if c == 'All' %}active{% endif %}" data-category="{{ c }}" type="button">{{ c }}</button>
+        {% endfor %}
+      </div>
+      <div class="table-responsive">
+        <table id="phrase-table" class="table table-sm align-middle">
+          <thead><tr><th>English</th><th>Arabic</th><th>Category</th><th>Copy</th></tr></thead>
+          <tbody>
+            {% set phrases = [
+              ('Bill of Quantities','جدول الكميات','Contracts'),
+              ('Site Engineer','مهندس موقع','Personnel'),
+              ('Daily Progress Report','تقرير التقدم اليومي','Reports'),
+              ('Change Order','أمر التغيير','Contracts'),
+              ('Subcontractor','مقاول من الباطن','Personnel'),
+              ('Foundation Works','أعمال الأساسات','Civil'),
+              ('Rebar','حديد التسليح','Materials'),
+              ('Concrete Mix','خلطة الخرسانة','Materials'),
+              ('Scaffolding','السقالات','Safety'),
+              ('Project Manager','مدير المشروع','Personnel'),
+              ('Progress Payment','دفعة مرحلية','Finance'),
+              ('Punch List','قائمة الأعمال المتبقية','QA/QC'),
+              ('As-Built Drawings','رسومات كما نُفِّذ','Engineering'),
+              ('Critical Path','المسار الحرج','Planning'),
+              ('Mobilization Cost','تكلفة التعبئة','Finance'),
+              ('Retention Money','مبلغ الضمان','Finance'),
+              ('Snag List','قائمة العيوب','QA/QC'),
+              ('Handover Certificate','شهادة التسليم','Contracts'),
+              ('Method Statement','بيان الطريقة','HSE'),
+              ('Variation Order','أمر التعديل','Contracts')
+            ] %}
+            {% for en, ar, cat in phrases %}
+            <tr data-category="{{ cat }}"><td>{{ en }}</td><td>{{ ar }}</td><td>{{ cat }}</td><td><button class="btn btn-sm btn-outline-secondary" onclick='copyPhrase({{ (en ~ " | " ~ ar)|tojson }})' type="button">Copy</button></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="edit-reply-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background:#0B3C5D;">
+        <h6 class="modal-title">✏️ Edit Reply</h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">English</label>
+        <textarea id="edit-reply-textarea-en" class="form-control mb-3" rows="3" dir="ltr"></textarea>
+        <label class="form-label">العربية</label>
+        <textarea id="edit-reply-textarea-ar" class="form-control" rows="3" dir="rtl"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-outline-gold" type="button" onclick="copyEditedReply('en')">Copy EN</button>
+        <button class="btn btn-gold" type="button" onclick="copyEditedReply('ar')">نسخ</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/translator.js') }}"></script>
+{% endblock %}

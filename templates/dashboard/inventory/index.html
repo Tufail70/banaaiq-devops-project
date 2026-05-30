@@ -1,0 +1,298 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% from "_macros/bilingual.html" import page_title %}
+{% block title %}Inventory Tracker | BanaaIQ{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid px-4">
+
+  {# ── Page header ── #}
+  {% call page_title('Inventory Tracker', 'متابعة المخزون',
+      sub=('Manage master inventory batches and distribute materials to site engineers.' if role == 'pm'
+           else 'View your assigned materials and log consumption.')) %}
+    {% if role == 'pm' %}
+      {% if pending_requests > 0 %}
+      <a href="{{ url_for('inventory_requests') }}" class="bq-btn bq-btn--secondary" style="position:relative;">
+        <i class="fa fa-bell" aria-hidden="true"></i> Stock Requests
+        <span class="bq-pill bq-pill--danger" style="padding:2px 6px;font-size:10px;margin-inline-start:4px;">{{ pending_requests }}</span>
+      </a>
+      {% else %}
+      <a href="{{ url_for('inventory_requests') }}" class="bq-btn bq-btn--secondary">
+        <i class="fa fa-bell" aria-hidden="true"></i> Stock Requests
+      </a>
+      {% endif %}
+      <a href="{{ url_for('inventory_create') }}" class="bq-btn bq-btn--primary">
+        <i class="fa fa-magic" aria-hidden="true"></i> Create Master Inventory
+      </a>
+      <a href="{{ url_for('inventory_create_manual') }}" class="bq-btn bq-btn--secondary">
+        <i class="fa fa-pen-to-square" aria-hidden="true"></i> Create Manually
+      </a>
+      <a href="{{ url_for('inventory_upload_revise') }}" class="bq-btn bq-btn--secondary">
+        <i class="fa fa-file-arrow-up" aria-hidden="true"></i> Upload &amp; Revise
+      </a>
+    {% else %}
+      <a href="{{ url_for('inventory_request') }}" class="bq-btn bq-btn--primary">
+        <i class="fa fa-hand-holding" aria-hidden="true"></i> Request Stock
+      </a>
+    {% endif %}
+  {% endcall %}
+
+  {# ── Flash Messages ── #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if role == 'pm' %}
+  {# ── PM VIEW: 3-column responsive grid of batch cards ── #}
+
+    {% if batches %}
+    <div class="row g-3">
+      {# Existing batches #}
+      {% for batch in batches %}
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="bq-card h-100" style="border-inline-start:3px solid var(--bq-gold);display:flex;flex-direction:column;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;">
+            <div>
+              <h3 style="font-family:var(--bq-mono);font-size:var(--bq-fs-sm);font-weight:600;margin:0 0 4px;letter-spacing:.04em;">
+                BATCH <span class="bq-num">#{{ batch.batch_id[:8] | upper }}</span>
+              </h3>
+              <p style="color:var(--bq-text-muted);font-size:var(--bq-fs-xs);margin:0;">
+                <i class="fa fa-folder fa-fw" aria-hidden="true"></i>
+                {{ batch.project.name if batch.project else 'No project linked' }}
+              </p>
+            </div>
+            <span class="bq-pill bq-pill--gold bq-num">{{ batch.item_count }} items</span>
+          </div>
+          <!-- Stats mini row -->
+          <div style="display:flex;gap:var(--bq-s-4);margin-bottom:var(--bq-s-4);">
+            <div style="text-align:center;flex:1;">
+              <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);">{{ batch.item_count }}</div>
+              <div class="bq-eyebrow" style="font-size:9px;">Items</div>
+            </div>
+            <div style="text-align:center;flex:1;">
+              <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);color:var(--bq-gold-2);">{{ '{:,.0f}'.format(batch.total_sar) }}</div>
+              <div class="bq-eyebrow" style="font-size:9px;">SAR Value</div>
+            </div>
+            <div style="text-align:center;flex:1;">
+              <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;font-size:var(--bq-fs-md);color:{{ 'var(--bq-success)' if batch.distributed_count > 0 else 'var(--bq-text-faint)' }};">{{ batch.distributed_count }}</div>
+              <div class="bq-eyebrow" style="font-size:9px;">Distributed</div>
+            </div>
+          </div>
+          <!-- Action row -->
+          <div style="display:flex;gap:8px;margin-top:auto;">
+            <a href="{{ url_for('inventory_batch_view', batch_id=batch.batch_id) }}"
+               class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">
+              <i class="fa fa-eye" aria-hidden="true"></i> View
+            </a>
+            <a href="{{ url_for('inventory_batch_distribute', batch_id=batch.batch_id) }}"
+               class="bq-btn bq-btn--primary bq-btn--sm" style="flex:1;">
+              <i class="fa fa-share-nodes" aria-hidden="true"></i> Distribute
+            </a>
+          </div>
+          <p style="color:var(--bq-text-faint);font-size:var(--bq-fs-xs);font-family:var(--bq-mono);margin:12px 0 0;">
+            <i class="fa fa-clock" aria-hidden="true"></i>
+            Created {{ batch.created_at.strftime('%d %b %Y') if batch.created_at else 'N/A' }}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+      {# Empty-slot placeholder #}
+      <div class="col-12 col-md-6 col-xl-4">
+        <a href="{{ url_for('inventory_create') }}" class="bq-card h-100 text-decoration-none"
+           style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--bq-border);gap:12px;min-height:180px;background:var(--bq-surface-2);cursor:pointer;transition:border-color .2s;">
+          <div class="bq-empty__icon" style="margin:0;">
+            <i class="fa fa-plus" aria-hidden="true"></i>
+          </div>
+          <p style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);margin:0;text-align:center;">
+            Create new batch
+          </p>
+        </a>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="bq-empty">
+      <div class="bq-empty__icon"><i class="fa fa-boxes-stacked" aria-hidden="true"></i></div>
+      <h2 class="bq-empty__title">No Inventory Batches Yet</h2>
+      <p class="bq-empty__body">
+        Create your first AI-generated master inventory from a project description to start tracking and distributing materials.
+      </p>
+      <div class="bq-empty__cta">
+        <a href="{{ url_for('inventory_create') }}" class="bq-btn bq-btn--primary">
+          <i class="fa fa-magic" aria-hidden="true"></i> Create Master Inventory
+        </a>
+        <a href="{{ url_for('inventory_create_manual') }}" class="bq-btn bq-btn--secondary">
+          <i class="fa fa-pen-to-square" aria-hidden="true"></i> Create Manually
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  {% else %}
+  {# ── SE VIEW: Assigned Items ── #}
+
+    {% if items_data %}
+      {# Summary KPI strip #}
+      {% set critical_count = items_data | selectattr('alert', 'equalto', 'critical') | list | length %}
+      {% set low_count = items_data | selectattr('alert', 'equalto', 'low') | list | length %}
+      <div style="display:flex;gap:var(--bq-s-3);flex-wrap:wrap;margin-bottom:var(--bq-s-5);">
+        <div class="bq-kpi" style="flex:1;min-width:130px;">
+          <div class="bq-kpi__accent"></div>
+          <div class="bq-kpi__label">Assigned Items</div>
+          <div class="bq-kpi__value bq-num">{{ items_data | length }}</div>
+        </div>
+        <div class="bq-kpi" style="flex:1;min-width:130px;">
+          <div class="bq-kpi__accent" style="background:var(--bq-success);"></div>
+          <div class="bq-kpi__label">OK Stock</div>
+          <div class="bq-kpi__value bq-num" style="color:var(--bq-success);">{{ items_data | selectattr('alert', 'equalto', 'ok') | list | length }}</div>
+        </div>
+        <div class="bq-kpi" style="flex:1;min-width:130px;">
+          <div class="bq-kpi__accent" style="background:var(--bq-warning);"></div>
+          <div class="bq-kpi__label">Low Stock</div>
+          <div class="bq-kpi__value bq-num" style="color:var(--bq-warning);">{{ low_count }}</div>
+        </div>
+        <div class="bq-kpi" style="flex:1;min-width:130px;">
+          <div class="bq-kpi__accent" style="background:var(--bq-danger);"></div>
+          <div class="bq-kpi__label">Critical</div>
+          <div class="bq-kpi__value bq-num" style="color:var(--bq-danger);">{{ critical_count }}</div>
+        </div>
+      </div>
+
+      {% if critical_count > 0 or low_count > 0 %}
+      <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+        <i class="fa fa-triangle-exclamation me-2" aria-hidden="true"></i>
+        <div>
+          You have <strong>{{ critical_count }} critical</strong> and <strong>{{ low_count }} low</strong> stock items.
+          <a href="{{ url_for('inventory_request') }}" class="alert-link ms-1">Request more stock</a>.
+        </div>
+      </div>
+      {% endif %}
+
+      {# Group items by project #}
+      {% set ns = namespace(current_project=None) %}
+      {% for row in items_data | sort(attribute='item.project_id') %}
+        {% if row.item.project_id != ns.current_project %}
+          {% if not loop.first %}</div>{% endif %}
+          {% set ns.current_project = row.item.project_id %}
+          <p class="bq-eyebrow mt-4 mb-3">
+            <i class="fa fa-folder" aria-hidden="true"></i>&ensp;{{ row.item.project.name if row.item.project else 'Unassigned Project' }}
+          </p>
+          <div class="row g-3">
+        {% endif %}
+
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="bq-card h-100" style="display:flex;flex-direction:column;border-inline-start:3px solid {{ 'var(--bq-danger)' if row.alert == 'critical' else ('var(--bq-warning)' if row.alert == 'low' else 'var(--bq-success)') }};">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+              <h3 style="font-family:var(--bq-sans);font-size:var(--bq-fs-md);font-weight:600;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ row.item.name }}">
+                {{ row.item.name }}
+              </h3>
+              <span class="bq-pill {{ 'bq-pill--danger' if row.alert == 'critical' else ('bq-pill--warning' if row.alert == 'low' else 'bq-pill--success') }}">
+                {{ row.alert | capitalize }}
+              </span>
+            </div>
+            {% if row.item.name_ar %}
+            <div style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);margin-bottom:8px;font-family:var(--bq-arabic);" dir="rtl">{{ row.item.name_ar }}</div>
+            {% endif %}
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span class="bq-pill bq-pill--neutral" style="font-size:10px;">{{ row.item.category or 'General' }}</span>
+              <span style="color:var(--bq-text-faint);font-size:var(--bq-fs-xs);font-family:var(--bq-mono);">{{ row.item.unit or '' }}</span>
+            </div>
+            <div style="display:flex;gap:var(--bq-s-5);margin-bottom:8px;">
+              <div>
+                <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;">{{ '{:,.1f}'.format(row.item.stock | float) }}</div>
+                <div class="bq-eyebrow" style="font-size:9px;">Stock</div>
+              </div>
+              <div>
+                <div class="bq-num" style="font-family:var(--bq-mono);color:var(--bq-text-muted);">{{ '{:,.1f}'.format(row.item.threshold | float) }}</div>
+                <div class="bq-eyebrow" style="font-size:9px;">Threshold</div>
+              </div>
+              {% if row.assignment %}
+              <div>
+                <div class="bq-num" style="font-family:var(--bq-mono);font-weight:600;">{{ '{:,.1f}'.format(row.assignment.allocated_qty | float) }}</div>
+                <div class="bq-eyebrow" style="font-size:9px;">Allocated</div>
+              </div>
+              {% endif %}
+            </div>
+            {% if row.item.threshold | float > 0 %}
+            {% set pct = [((row.item.stock | float) / (row.item.threshold | float) * 100), 100] | min %}
+            <div class="bq-progress-bar-track" role="progressbar" aria-valuenow="{{ pct|round|int }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="{{ row.item.name }} stock level {{ pct|round|int }}%" style="margin-bottom:12px;">
+              <div class="bq-progress-bar-fill" style="width:{{ pct }}%;background:{{ 'var(--bq-danger)' if row.alert == 'critical' else ('var(--bq-warning)' if row.alert == 'low' else 'var(--bq-success)') }};"></div>
+            </div>
+            {% endif %}
+            <div style="display:flex;gap:8px;margin-top:auto;">
+              <a href="{{ url_for('inventory_item_detail', item_id=row.item.id) }}"
+                 class="bq-btn bq-btn--secondary bq-btn--sm" style="flex:1;">
+                <i class="fa fa-eye" aria-hidden="true"></i> Details
+              </a>
+              <a href="{{ url_for('inventory_request') }}?item_id={{ row.item.id }}"
+                 class="bq-btn bq-btn--primary bq-btn--sm" style="flex:1;">
+                <i class="fa fa-plus" aria-hidden="true"></i> Request
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+      </div>
+
+    {% else %}
+    <div class="bq-empty">
+      <div class="bq-empty__icon"><i class="fa fa-hard-hat" aria-hidden="true"></i></div>
+      <h2 class="bq-empty__title">No Inventory Assigned Yet</h2>
+      <p class="bq-empty__body">Your project manager hasn't assigned any inventory items to you yet.</p>
+      <div class="bq-empty__cta">
+        <a href="{{ url_for('inventory_request') }}" class="bq-btn bq-btn--primary">
+          <i class="fa fa-hand-holding" aria-hidden="true"></i> Request Stock
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# SE: pending requests table #}
+    {% if role == 'se' and my_pending_requests %}
+    <div class="mt-5">
+      <p class="bq-eyebrow mb-3"><i class="fa fa-clock" aria-hidden="true"></i>&ensp;My Pending Stock Requests</p>
+      <div class="bq-card bq-card--bare">
+        <div class="table-responsive">
+          <table class="bq-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th class="num">Qty</th>
+                <th>Submitted</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sr in my_pending_requests %}
+              <tr>
+                <td>{{ sr.proposed_item_name or '—' }}</td>
+                <td class="num">{{ sr.requested_qty }} <span style="color:var(--bq-text-faint);font-size:var(--bq-fs-xs);">{{ sr.unit or '' }}</span></td>
+                <td style="font-family:var(--bq-mono);font-size:var(--bq-fs-xs);color:var(--bq-text-muted);">{{ sr.created_at.strftime('%d %b %Y') if sr.created_at else '—' }}</td>
+                <td class="text-end">
+                  <form method="POST" action="{{ url_for('inventory_request_delete', request_id=sr.id) }}"
+                        onsubmit="return confirm('Delete this pending request?');" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="bq-btn bq-btn--ghost bq-btn--sm" style="color:var(--bq-danger);"
+                            aria-label="Delete request {{ sr.proposed_item_name }}">
+                      <i class="fa fa-trash" aria-hidden="true"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  {% endif %}
+
+</div>
+{% endblock %}

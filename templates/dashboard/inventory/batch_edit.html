@@ -1,0 +1,324 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Edit Inventory Batch | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('inventory_batch_view', batch_id=batch_id) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+      <i class="fas fa-pen me-2" style="color:#F59E0B;"></i>
+      Edit Batch #{{ batch_id[:8] | upper }}
+    </h4>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('inventory_batch_edit', batch_id=batch_id) }}" id="batch-edit-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="delete_ids" id="delete_ids" value="">
+    <input type="hidden" name="new_count" id="new_count" value="0">
+
+    {% for cat_name, items in categories.items() %}
+    <div class="card border-0 shadow-sm mb-4 inventory-edit-card">
+      <div class="card-header fw-bold py-3" style="background:#0B3C5D;color:#fff;">
+        <i class="fas fa-tag me-2" style="color:#F59E0B;"></i>{{ cat_name }}
+        <span class="badge bg-gold-soft text-dark ms-2">{{ items | length }} items</span>
+      </div>
+      <div class="card-body p-0">
+        {% for item in items %}
+        <div id="row-{{ item.id }}" class="border-bottom p-3">
+          {# Primary fields — always visible #}
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label form-label-sm fw-semibold small">Name (EN)</label>
+              <input type="text" name="name_{{ item.id }}" value="{{ item.name }}"
+                     class="form-control form-control-sm" required maxlength="200">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label form-label-sm fw-semibold small">Name (AR)</label>
+              <input type="text" name="name_ar_{{ item.id }}" value="{{ item.name_ar or '' }}"
+                     class="form-control form-control-sm" maxlength="200" dir="rtl">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label form-label-sm fw-semibold small">Category</label>
+              <input type="text" name="category_{{ item.id }}" value="{{ item.category or '' }}"
+                     class="form-control form-control-sm" maxlength="50" list="cat-list">
+            </div>
+            <div class="col-1">
+              <label class="form-label form-label-sm fw-semibold small">Unit</label>
+              <input type="text" name="unit_{{ item.id }}" value="{{ item.unit or '' }}"
+                     class="form-control form-control-sm" maxlength="30">
+            </div>
+            <div class="col-1">
+              <label class="form-label form-label-sm fw-semibold small">Stock</label>
+              <input type="number" name="stock_{{ item.id }}" value="{{ item.stock | float }}"
+                     class="form-control form-control-sm" step="0.001" min="0">
+            </div>
+            <div class="col-1">
+              <label class="form-label form-label-sm fw-semibold small">Threshold</label>
+              <input type="number" name="threshold_{{ item.id }}" value="{{ item.threshold | float }}"
+                     class="form-control form-control-sm" step="0.001" min="0">
+            </div>
+            <div class="col-1">
+              <label class="form-label form-label-sm fw-semibold small">SAR</label>
+              <input type="number" name="value_sar_{{ item.id }}" value="{{ item.value_sar | float }}"
+                     class="form-control form-control-sm" step="0.01" min="0">
+            </div>
+            <div class="col-auto d-flex gap-1 align-items-end">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
+                      data-bs-toggle="collapse" data-bs-target="#proc_{{ item.id }}"
+                      title="Specification & Procurement">
+                <i class="fas fa-flask" style="font-size:11px;"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1 inventory-delete-btn"
+                      onclick="markDelete(this, {{ item.id }})">
+                <i class="fas fa-trash" style="font-size:11px;"></i>
+              </button>
+            </div>
+          </div>
+
+          {# Collapsible: Specification & Procurement #}
+          <div class="collapse mt-2" id="proc_{{ item.id }}">
+            <div class="bg-light rounded p-3">
+              <div class="fw-semibold small mb-2" style="color:#0B3C5D;">
+                <i class="fas fa-flask me-1" style="color:#F59E0B;"></i>Specification &amp; Procurement
+              </div>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label form-label-sm small">Specification</label>
+                  <input type="text" name="specification_{{ item.id }}"
+                         value="{{ item.specification or '' }}" class="form-control form-control-sm"
+                         maxlength="2000" placeholder="Grade, standard, technical attributes...">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label form-label-sm small">Brand Suggestions (comma-separated)</label>
+                  <input type="text" name="brand_suggestions_{{ item.id }}"
+                         value="{{ (item.brand_suggestions_json | from_json) | join(', ') if item.brand_suggestions_json else '' }}"
+                         class="form-control form-control-sm" maxlength="500"
+                         placeholder="Saudi Cement Co., Yamama Cement, or equivalent">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label form-label-sm small">Supplier Hint</label>
+                  <input type="text" name="supplier_{{ item.id }}"
+                         value="{{ item.supplier or '' }}" class="form-control form-control-sm" maxlength="100">
+                </div>
+                <div class="col-12">
+                  <label class="form-label form-label-sm small">Storage Requirements</label>
+                  <input type="text" name="storage_requirements_{{ item.id }}"
+                         value="{{ item.storage_requirements or '' }}" class="form-control form-control-sm"
+                         maxlength="1000" placeholder="Indoor dry storage. Max 10 bags high. Avoid moisture...">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label form-label-sm small">Lead Time (days)</label>
+                  <input type="number" name="reorder_lead_time_days_{{ item.id }}"
+                         value="{{ item.reorder_lead_time_days or '' }}" class="form-control form-control-sm"
+                         min="0" placeholder="7">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label form-label-sm small">Min Order Qty</label>
+                  <input type="number" name="min_order_qty_{{ item.id }}"
+                         value="{{ item.min_order_qty | float if item.min_order_qty else '' }}"
+                         class="form-control form-control-sm" step="0.01" min="0" placeholder="50">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label form-label-sm small">Min Order Unit</label>
+                  <input type="text" name="min_order_unit_{{ item.id }}"
+                         value="{{ item.min_order_unit or '' }}" class="form-control form-control-sm"
+                         maxlength="50" placeholder="bags (1 pallet)">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label form-label-sm small">Shelf Life (days)</label>
+                  <input type="number" name="shelf_life_days_{{ item.id }}"
+                         value="{{ item.shelf_life_days or '' }}" class="form-control form-control-sm"
+                         min="0" placeholder="90">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label form-label-sm small">Shelf Life Note</label>
+                  <input type="text" name="shelf_life_note_{{ item.id }}"
+                         value="{{ item.shelf_life_note or '' }}" class="form-control form-control-sm"
+                         maxlength="500" placeholder="From manufacture date on bag...">
+                </div>
+                <div class="col-12">
+                  <label class="form-label form-label-sm small">Safety Notes</label>
+                  <input type="text" name="safety_notes_{{ item.id }}"
+                         value="{{ item.safety_notes or '' }}" class="form-control form-control-sm"
+                         maxlength="1000" placeholder="PPE required: N95 mask, goggles, gloves...">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <datalist id="cat-list">
+      <option value="Cement & Concrete">
+      <option value="Steel & Rebar">
+      <option value="Electrical">
+      <option value="Plumbing">
+      <option value="HVAC">
+      <option value="Finishing & Tiling">
+      <option value="Paints">
+      <option value="Doors & Windows">
+      <option value="Tools">
+      <option value="Safety Equipment">
+      <option value="Consumables">
+      <option value="General">
+    </datalist>
+
+    {# New items section #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header py-3" style="background:#198754;color:#fff;">
+        <i class="fas fa-plus me-2"></i> New Items
+      </div>
+      <div class="card-body p-0" id="new-items-container">
+        {# New item rows injected by JS #}
+      </div>
+      <div class="px-3 py-2">
+        <button type="button" class="btn btn-sm btn-outline-success" onclick="addNewRow()">
+          <i class="fas fa-plus me-1"></i> Add Item / إضافة عنصر
+        </button>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-gold fw-bold">
+        <i class="fas fa-save me-1"></i> Save Changes / حفظ التغييرات
+      </button>
+      <a href="{{ url_for('inventory_batch_view', batch_id=batch_id) }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+.bg-gold-soft { background:#fff8e7; }
+.row-deleted { opacity:0.35; text-decoration:line-through; pointer-events:none; }
+</style>
+
+<script>
+let newRowCount = 0;
+const deletedIds = [];
+
+function markDelete(btn, itemId) {
+  const row = document.getElementById(`row-${itemId}`);
+  row.classList.add('row-deleted');
+  deletedIds.push(String(itemId));
+  document.getElementById('delete_ids').value = deletedIds.join(',');
+  btn.disabled = true;
+}
+
+function addNewRow() {
+  newRowCount++;
+  document.getElementById('new_count').value = newRowCount;
+  const n = newRowCount;
+  const container = document.getElementById('new-items-container');
+  const div = document.createElement('div');
+  div.className = 'border-bottom p-3';
+  div.innerHTML = `
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label form-label-sm fw-semibold small">Name (EN)</label>
+        <input type="text" name="new_${n}_name" class="form-control form-control-sm" required maxlength="200" placeholder="Item name">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm fw-semibold small">Name (AR)</label>
+        <input type="text" name="new_${n}_name_ar" class="form-control form-control-sm" maxlength="200" dir="rtl">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm fw-semibold small">Category</label>
+        <input type="text" name="new_${n}_category" class="form-control form-control-sm" maxlength="50" list="cat-list" placeholder="Category">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Unit</label>
+        <input type="text" name="new_${n}_unit" class="form-control form-control-sm" maxlength="30" placeholder="pcs">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Stock</label>
+        <input type="number" name="new_${n}_stock" class="form-control form-control-sm" step="0.001" min="0" value="0">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">Threshold</label>
+        <input type="number" name="new_${n}_threshold" class="form-control form-control-sm" step="0.001" min="0" value="0">
+      </div>
+      <div class="col-1">
+        <label class="form-label form-label-sm fw-semibold small">SAR</label>
+        <input type="number" name="new_${n}_value_sar" class="form-control form-control-sm" step="0.01" min="0" value="0">
+      </div>
+      <div class="col-auto d-flex gap-1 align-items-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
+                data-bs-toggle="collapse" data-bs-target="#new_proc_${n}"
+                title="Specification & Procurement">
+          <i class="fas fa-flask" style="font-size:11px;"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1" onclick="this.closest('.border-bottom').remove(); newRowCount--; document.getElementById('new_count').value = newRowCount;">
+          <i class="fas fa-trash" style="font-size:11px;"></i>
+        </button>
+      </div>
+    </div>
+    <div class="collapse mt-2" id="new_proc_${n}">
+      <div class="bg-light rounded p-3">
+        <div class="fw-semibold small mb-2" style="color:#0B3C5D;">
+          <i class="fas fa-flask me-1" style="color:#F59E0B;"></i>Specification &amp; Procurement
+        </div>
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Specification</label>
+            <input type="text" name="new_${n}_specification" class="form-control form-control-sm" maxlength="2000" placeholder="Grade, standard, technical attributes...">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm small">Brand Suggestions (comma-separated)</label>
+            <input type="text" name="new_${n}_brand_suggestions" class="form-control form-control-sm" maxlength="500">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm small">Supplier Hint</label>
+            <input type="text" name="new_${n}_supplier" class="form-control form-control-sm" maxlength="100">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Storage Requirements</label>
+            <input type="text" name="new_${n}_storage_requirements" class="form-control form-control-sm" maxlength="1000">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Lead Time (days)</label>
+            <input type="number" name="new_${n}_reorder_lead_time_days" class="form-control form-control-sm" min="0">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Min Order Qty</label>
+            <input type="number" name="new_${n}_min_order_qty" class="form-control form-control-sm" step="0.01" min="0">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Min Order Unit</label>
+            <input type="text" name="new_${n}_min_order_unit" class="form-control form-control-sm" maxlength="50">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm small">Shelf Life (days)</label>
+            <input type="number" name="new_${n}_shelf_life_days" class="form-control form-control-sm" min="0">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm small">Shelf Life Note</label>
+            <input type="text" name="new_${n}_shelf_life_note" class="form-control form-control-sm" maxlength="500">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Safety Notes</label>
+            <input type="text" name="new_${n}_safety_notes" class="form-control form-control-sm" maxlength="1000">
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm small">Notes</label>
+            <input type="text" name="new_${n}_notes" class="form-control form-control-sm" maxlength="500">
+          </div>
+        </div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+}
+</script>
+{% endblock %}

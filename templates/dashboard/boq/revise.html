@@ -1,0 +1,164 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ tr('Request Revision', 'طلب تعديل') }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex align-items-center mb-4 gap-3">
+    <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+        <i class="fas fa-pen me-2" style="color:var(--color-gold)"></i>
+        {{ tr('Submit BOQ Revision', 'تقديم مراجعة لجدول الكميات') }}
+      </h4>
+      <small class="text-muted">{{ boq.title }} — v{{ boq.version or 1 }}
+        {% if boq.trade_section %}
+        <span class="badge ms-1" style="background:var(--color-gold);color:#fff">{{ boq.trade_section }}</span>
+        {% endif %}
+      </small>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:var(--color-navy)">{{ tr('Current BOQ Summary','ملخص الجدول الحالي') }}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-4 text-center">
+              <div class="small text-muted">{{ tr('Grand Total','الإجمالي') }}</div>
+              <div class="fw-bold" style="color:var(--color-navy)">SAR {{ "{:,.0f}".format(boq.grand_total|float) }}</div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="small text-muted">{{ tr('Sections','الأقسام') }}</div>
+              <div class="fw-bold">{{ sections|length }}</div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="small text-muted">{{ tr('Status','الحالة') }}</div>
+              <div><span class="badge bg-primary">{{ boq.status }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <form method="POST" action="{{ url_for('boq_revise', boq_id=boq.id) }}" id="revise-form" data-ai-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">
+                  {{ tr('Revision Notes', 'ملاحظات المراجعة') }} <span class="text-danger">*</span>
+                </label>
+                <button type="button" id="mic-btn" class="btn btn-sm btn-outline-danger">
+                  <i class="fas fa-microphone me-1"></i>{{ tr('Voice Input','إدخال صوتي') }}
+                </button>
+              </div>
+
+              <div id="recording-indicator" class="d-none alert alert-danger py-2 small mb-2">
+                <i class="fas fa-circle text-danger fa-beat me-1"></i>
+                <span id="rec-timer">0:00</span> —
+                {{ tr('Recording...', 'جارٍ التسجيل...') }}
+                <button type="button" id="stop-btn" class="btn btn-sm btn-danger ms-2">{{ tr('Stop','إيقاف') }}</button>
+              </div>
+              <div id="transcribing-indicator" class="d-none alert alert-info py-2 small mb-2">
+                <i class="fas fa-spinner fa-spin me-1"></i> {{ tr('Transcribing...','جارٍ النسخ...') }}
+              </div>
+
+              <textarea name="revision_notes" id="revision-notes" class="form-control" rows="6" required maxlength="2000"
+                placeholder="{{ tr('Describe what needs to change — e.g.: Add 50m2 extra flooring, update labour rates for MEP items, remove provisional sums...', 'صف ما يجب تغييره — مثال: أضف 50م² أرضيات إضافية، حدّث أسعار العمالة لبنود الكهرباء، احذف المبالغ الاحتياطية...') }}"></textarea>
+              <div class="text-end mt-1"><small class="text-muted" id="char-count">0 / 2000</small></div>
+            </div>
+
+            <div class="alert alert-info small">
+              <i class="fas fa-info-circle me-1"></i>
+              {{ tr('Submitting a revision will create a new version (v', 'سيؤدي تقديم مراجعة إلى إنشاء إصدار جديد (v') }}{{ (boq.version or 1) + 1 }}) {{ tr('and archive the current version. Your PM will be notified.', 'وأرشفة الإصدار الحالي. سيتم إشعار مدير مشروعك.') }}
+            </div>
+
+            <div class="d-flex gap-3">
+              <button type="submit" id="submit-btn" class="btn btn-warning fw-bold px-4">
+                <i class="fas fa-paper-plane me-2"></i>
+                {{ tr('Submit Revision', 'تقديم المراجعة') }}
+              </button>
+              <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-outline-secondary">{{ tr('Cancel','إلغاء') }}</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm" style="border-left:4px solid var(--color-gold) !important">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3" style="color:var(--color-navy)"><i class="fas fa-lightbulb me-2" style="color:var(--color-gold)"></i>{{ tr('Revision Tips','نصائح المراجعة') }}</h6>
+          <ul class="small text-muted mb-0 ps-3">
+            <li class="mb-1">{{ tr('Be specific about what items or quantities need changing', 'كن محددًا بشأن البنود أو الكميات التي تحتاج تغييرًا') }}</li>
+            <li class="mb-1">{{ tr('Use voice input to record your notes quickly', 'استخدم الإدخال الصوتي لتسجيل ملاحظاتك بسرعة') }}</li>
+            <li class="mb-1">{{ tr('Your PM will review and approve the revision', 'سيراجع مدير مشروعك المراجعة ويوافق عليها') }}</li>
+            <li>{{ tr('All previous versions remain accessible', 'جميع الإصدارات السابقة تبقى متاحة') }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const notes = document.getElementById('revision-notes');
+const counter = document.getElementById('char-count');
+notes.addEventListener('input', () => { counter.textContent = notes.value.length + ' / 2000'; });
+
+let mediaRecorder, audioChunks = [], recInterval;
+const micBtn = document.getElementById('mic-btn');
+const stopBtn = document.getElementById('stop-btn');
+const recIndicator = document.getElementById('recording-indicator');
+const transIndicator = document.getElementById('transcribing-indicator');
+const recTimer = document.getElementById('rec-timer');
+
+micBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      clearInterval(recInterval);
+      recIndicator.classList.add('d-none');
+      transIndicator.classList.remove('d-none');
+      const blob = new Blob(audioChunks, {type: 'audio/webm'});
+      const fd = new FormData();
+      fd.append('audio', blob, 'recording.webm');
+      try {
+        const resp = await fetch('/api/boq/transcribe', {method:'POST', body:fd});
+        const data = await resp.json();
+        transIndicator.classList.add('d-none');
+        if (data.success) {
+          notes.value = (notes.value ? notes.value + '\n' : '') + data.text;
+          counter.textContent = notes.value.length + ' / 2000';
+        } else {
+          alert('{{ tr("Transcription failed","فشل النسخ") }}: ' + (data.error || ''));
+        }
+      } catch(e) {
+        transIndicator.classList.add('d-none');
+        alert('{{ tr("Transcription error.","خطأ في النسخ.") }}');
+      }
+    };
+    mediaRecorder.start();
+    let secs = 0;
+    recInterval = setInterval(() => { secs++; recTimer.textContent = Math.floor(secs/60)+':'+(secs%60+'').padStart(2,'0'); }, 1000);
+    recIndicator.classList.remove('d-none');
+    micBtn.classList.add('d-none');
+  } catch(e) {
+    alert('{{ tr("Microphone access denied.","تم رفض الوصول.") }}');
+  }
+});
+
+stopBtn.addEventListener('click', () => { if (mediaRecorder) mediaRecorder.stop(); micBtn.classList.remove('d-none'); });
+
+document.getElementById('revise-form').addEventListener('submit', function() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{{ tr("Submitting...","جارٍ الإرسال...") }}';
+});
+</script>
+{% endblock %}

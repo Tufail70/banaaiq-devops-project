@@ -1,0 +1,190 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% from "_macros/bilingual.html" import page_title %}
+{% block dashboard_content %}
+<div class="container-fluid px-4">
+
+    {# ── Page header ── #}
+    {% call page_title('Daily Progress', 'تقرير التقدم اليومي',
+        sub='Create, manage and export daily site progress reports with AI bilingual summaries.') %}
+      <a href="{{ url_for('dashboard_dpr_new', project=selected_project|default('all')) }}" class="bq-btn bq-btn--primary">
+        <i class="fa fa-file-circle-plus" aria-hidden="true"></i> {{ tr('New DPR', 'تقرير جديد') }}
+      </a>
+      <div class="dropdown">
+        <button class="bq-btn bq-btn--secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fa fa-download" aria-hidden="true"></i> {{ tr('Export', 'تصدير') }} <i class="fa fa-chevron-down fa-xs ms-1" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('dashboard_dpr_export_all_pdf') }}" target="_blank">
+            <i class="fa fa-file-pdf me-2" aria-hidden="true"></i> {{ tr('Export All PDF', 'تصدير PDF') }}
+          </a></li>
+          <li><a class="dropdown-item" href="{{ url_for('dashboard_dpr_export_all_excel') }}">
+            <i class="fa fa-file-excel me-2" aria-hidden="true"></i> {{ tr('Export All Excel', 'تصدير Excel') }}
+          </a></li>
+        </ul>
+      </div>
+    {% endcall %}
+
+    {% if show_demo_data or projects or dpr_records %}
+
+    {# ── Filter row ── #}
+    <form class="row g-2 mb-4 align-items-end" method="get" action="{{ url_for('dashboard_dpr_index') }}"
+          role="search" aria-label="{{ tr('Filter DPRs','تصفية التقارير') }}">
+        <div class="col-md-4 col-sm-6">
+            <label class="bq-field__label" for="dpr-project-filter">{{ tr('Project', 'المشروع') }}</label>
+            <select class="bq-input" id="dpr-project-filter" name="project">
+                {% if show_demo_data %}
+                <option value="All Projects" {{ 'selected' if selected_project == 'All Projects' else '' }}>All Projects</option>
+                {% for p in dpr_projects %}
+                <option value="{{ p }}" {{ 'selected' if selected_project == p else '' }}>{{ p }}</option>
+                {% endfor %}
+                {% else %}
+                <option value="all" {{ 'selected' if selected_project == 'all' else '' }}>{{ tr('All Projects', 'جميع المشاريع') }}</option>
+                {% for p in projects %}
+                <option value="{{ p.id }}" {{ 'selected' if selected_project|string == p.id|string else '' }}>{{ p.name }}</option>
+                {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="bq-field__label" for="dpr-from-date">{{ tr('From', 'من') }}</label>
+            <input type="date" class="bq-input" id="dpr-from-date" name="from" value="{{ selected_from }}">
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="bq-field__label" for="dpr-to-date">{{ tr('To', 'إلى') }}</label>
+            <input type="date" class="bq-input" id="dpr-to-date" name="to" value="{{ selected_to }}">
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="bq-field__label" for="dpr-status-filter">{{ tr('Status', 'الحالة') }}</label>
+            <select class="bq-input" id="dpr-status-filter" name="status">
+                <option value="All" {{ 'selected' if selected_status == 'All' else '' }}>{{ tr("All", "الكل") }}</option>
+                <option value="Completed" {{ 'selected' if selected_status == 'Completed' else '' }}>{{ tr("Completed", "مكتمل") }}</option>
+                <option value="Draft" {{ 'selected' if selected_status == 'Draft' else '' }}>{{ tr("Draft", "مسودة") }}</option>
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-12">
+            <button class="bq-btn bq-btn--secondary w-100" type="submit">
+                <i class="fa fa-search" aria-hidden="true"></i> {{ tr("Search", "بحث") }}
+            </button>
+        </div>
+    </form>
+
+    {% if dpr_records %}
+    <div class="bq-card bq-card--bare">
+        <div class="table-responsive">
+            <table class="bq-table">
+                <thead>
+                    <tr>
+                        <th>{{ tr("Date", "التاريخ") }}</th>
+                        <th>{{ tr("Project", "المشروع") }}</th>
+                        <th>{{ tr("Zone", "المنطقة") }}</th>
+                        <th class="num">{{ tr("Workers", "العمال") }}</th>
+                        <th>{{ tr("Weather", "الطقس") }}</th>
+                        <th>{{ tr("AI Summary", "ملخص AI") }}</th>
+                        <th>{{ tr("Status", "الحالة") }}</th>
+                        <th style="width:40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in dpr_records %}
+                    <tr data-id="{{ row.id }}">
+                        <td style="font-family:var(--bq-mono);font-size:var(--bq-fs-xs);">{{ row.date }}</td>
+                        <td>{{ row.project }}</td>
+                        <td style="color:var(--bq-text-muted);">{{ row.zone }}</td>
+                        <td class="num">{{ row.workers }}</td>
+                        <td style="color:var(--bq-text-muted);font-size:var(--bq-fs-sm);">{{ row.weather }}</td>
+                        <td>
+                            {% if row.has_ai_summary %}
+                            <span class="bq-pill bq-pill--success">{{ tr("Generated", "تم الإنشاء") }}</span>
+                            {% else %}
+                            <span class="bq-pill bq-pill--neutral">{{ tr("Pending", "غير منشأ") }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.status == "Completed" %}
+                            <span class="bq-pill bq-pill--success">{{ tr("Completed", "مكتمل") }}</span>
+                            {% else %}
+                            <span class="bq-pill bq-pill--warning">{{ tr("Draft", "مسودة") }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {# Single ⋯ overflow menu #}
+                            <div class="dropdown">
+                                <button class="bq-overflow-btn" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    aria-label="{{ tr('Actions','إجراءات') }} {{ row.date }}">
+                                    <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('dashboard_dpr_view', id=row.id) }}">
+                                        <i class="fa fa-eye me-2" aria-hidden="true"></i>{{ tr("View","عرض") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/dashboard/dpr/{{ row.id }}/edit">
+                                        <i class="fa fa-edit me-2" aria-hidden="true"></i>{{ tr("Edit","تعديل") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('dashboard_dpr_pdf', id=row.id) }}" target="_blank">
+                                        <i class="fa fa-file-pdf me-2" aria-hidden="true"></i>{{ tr("Export PDF","PDF") }}
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('dashboard_dpr_excel', id=row.id) }}">
+                                        <i class="fa fa-file-excel me-2" aria-hidden="true"></i>{{ tr("Export Excel","Excel") }}
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item text-danger" type="button" onclick="confirmDelete('dpr', {{ row.id }})">
+                                        <i class="fa fa-trash me-2" aria-hidden="true"></i>{{ tr("Delete","حذف") }}
+                                    </button></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--bq-s-4);flex-wrap:wrap;gap:var(--bq-s-2);">
+        <small style="color:var(--bq-text-muted);font-family:var(--bq-mono);font-size:var(--bq-fs-xs);">
+            {{ tr("Showing", "عرض") }} <span class="bq-num">{{ filtered_count }}</span> {{ tr("of", "من") }} <span class="bq-num">{{ total_count }}</span> {{ tr("reports", "تقارير") }}
+        </small>
+        <div style="display:flex;gap:4px;">
+            <button class="bq-btn bq-btn--secondary bq-btn--sm" type="button">{{ tr("Previous", "السابق") }}</button>
+            <button class="bq-btn bq-btn--secondary bq-btn--sm" type="button">1</button>
+            <button class="bq-btn bq-btn--secondary bq-btn--sm" type="button">{{ tr("Next", "التالي") }}</button>
+        </div>
+    </div>
+    {% else %}
+    {# Empty filtered state #}
+    <div class="bq-empty" style="padding: var(--bq-s-6) var(--bq-s-5);">
+        <div class="bq-empty__icon"><i class="fa fa-filter" aria-hidden="true"></i></div>
+        <h3 class="bq-empty__title">{{ tr("No reports match your filters", "لا توجد تقارير مطابقة للفلاتر المحددة") }}</h3>
+        <p class="bq-empty__body">{{ tr("Try changing the project, date range, or status filter above.", "حاول تغيير المشروع أو النطاق الزمني أو الحالة في الفلاتر أعلاه.") }}</p>
+    </div>
+    {% endif %}
+
+    {% else %}
+    {# Full empty state — no DPRs at all #}
+    <div class="bq-empty">
+        <div class="bq-empty__icon">
+            <i class="fa fa-file-lines" aria-hidden="true"></i>
+        </div>
+        <h2 class="bq-empty__title">{{ tr("No Daily Progress Reports yet", "لا توجد تقارير تقدم يومية بعد") }}</h2>
+        <p class="bq-empty__body">
+            {{ tr(
+                "Start logging site progress, workforce numbers, weather, and activities. Each DPR generates a bilingual AI summary for project records.",
+                "ابدأ بتسجيل تقدم الموقع وأعداد العمال والطقس والأنشطة. كل تقرير يُنشئ ملخصاً ثنائي اللغة بالذكاء الاصطناعي للسجلات."
+            ) }}
+        </p>
+        <div class="bq-empty__cta">
+            <a href="{{ url_for('dashboard_dpr_new', project=selected_project|default('all')) }}" class="bq-btn bq-btn--primary">
+                <i class="fa fa-file-circle-plus" aria-hidden="true"></i>
+                {{ tr("Create First DPR", "إنشاء أول تقرير") }}
+            </a>
+            <a href="{{ url_for('tutorials') }}" class="bq-btn bq-btn--ghost">
+                <i class="fa fa-play-circle" aria-hidden="true"></i>
+                {{ tr("Watch 60-sec demo", "شاهد عرضاً توضيحياً") }}
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

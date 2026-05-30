@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Start Trial | BanaaIQ{% endblock %}
+{% block content %}
+<style>
+.trial-shell { background: linear-gradient(180deg, #f5f7fb 0%, #ffffff 35%, #f8fafc 100%); padding: 72px 0; }
+.trial-card { border:none; border-radius:8px; box-shadow:0 24px 60px rgba(11,60,93,0.12); overflow:hidden; }
+.trial-summary { background:linear-gradient(135deg, #0B3C5D 0%, #163051 100%); color:#ffffff; }
+.cycle-option { border:1px solid #d9dee7; border-radius:8px; padding:16px; cursor:pointer; transition:all 0.2s ease; }
+.cycle-option:hover { border-color:#F59E0B; box-shadow:0 12px 30px rgba(11,60,93,0.08); }
+.cycle-option input:checked + span { color:#0B3C5D; font-weight:800; }
+</style>
+
+<section class="trial-shell">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="trial-card bg-white">
+          <div class="row g-0">
+            <div class="col-lg-5 trial-summary p-4 p-lg-5">
+              <span class="badge rounded-pill text-bg-warning text-dark fw-semibold mb-3">No credit card required</span>
+              <h1 class="h2 fw-bold mb-3">
+                {% if is_plan_change and current_status == 'active' %}
+                Update to {{ plan.display_name }}
+                {% else %}
+                Start your {{ plan.display_name }} trial
+                {% endif %}
+              </h1>
+              <p class="mb-4 text-white-50">
+                {% if is_plan_change and current_status == 'active' %}
+                You are switching plans inside your existing subscription workspace. Your data and current account stay exactly where they are.
+                {% else %}
+                Your 14-day trial ends on <strong class="text-white">{{ trial_end.strftime('%d %B %Y') }}</strong>. Explore the full workflow before you decide to subscribe.
+                {% endif %}
+              </p>
+              <div class="small text-white-50 mb-3">Included in {{ plan.display_name }}</div>
+              <ul class="list-unstyled mb-0">
+                {% for feature in plan.features_list %}
+                <li class="mb-2"><i class="fa-solid fa-check-circle me-2 text-warning"></i>{{ feature }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="col-lg-7 p-4 p-lg-5">
+              {% if is_plan_change and current_status == 'active' %}
+              <div class="alert alert-info border-0" style="background:#eef5ff;color:#15396b;">
+                Your current active plan will be updated to <strong>{{ plan.display_name }}</strong> using the billing cycle you choose below.
+              </div>
+              {% endif %}
+
+              <div class="mb-4">
+                <h2 class="h4 fw-bold mb-2">Plan Summary</h2>
+                <p class="text-muted mb-0">No credit card is required to begin. You can add payment details later from your billing dashboard.</p>
+              </div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                  <div class="border rounded-4 p-3 h-100">
+                    <div class="small text-uppercase text-muted fw-bold mb-1">Monthly</div>
+                    <div class="h3 fw-bold mb-0">{{ currency.symbol }} {{ plan_data.monthly_price_display if plan_data.monthly_price_display else 'Custom' }}</div>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="border rounded-4 p-3 h-100">
+                    <div class="small text-uppercase text-muted fw-bold mb-1">Annual</div>
+                    <div class="h3 fw-bold mb-0">{{ currency.symbol }} {{ plan_data.annual_price_display if plan_data.annual_price_display else 'Custom' }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <form method="post" action="{{ url_for('start_trial', plan_name=plan.name) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <h3 class="h5 fw-bold mb-3">Choose your billing cycle</h3>
+                <div class="row g-3 mb-4">
+                  <div class="col-sm-6">
+                    <label class="cycle-option d-block">
+                      <input class="form-check-input me-2" type="radio" name="billing_cycle" value="monthly" {{ 'checked' if billing_cycle == 'monthly' else '' }}>
+                      <span>Monthly billing</span>
+                      <div class="small text-muted mt-2">Flexible and straightforward for shorter projects.</div>
+                    </label>
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="cycle-option d-block">
+                      <input class="form-check-input me-2" type="radio" name="billing_cycle" value="annual" {{ 'checked' if billing_cycle == 'annual' else '' }}>
+                      <span>Annual billing</span>
+                      <div class="small text-muted mt-2">Lower effective rate for longer-running teams.</div>
+                    </label>
+                  </div>
+                </div>
+
+                {% if currency.code == 'INR' %}
+                <div class="mb-4" id="gstin-block">
+                  <label class="form-label fw-semibold mb-1" for="buyer_gstin">
+                    GST Number <span class="text-muted fw-normal">(optional — for B2B invoicing)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="buyer_gstin"
+                    name="buyer_gstin"
+                    class="form-control"
+                    maxlength="15"
+                    pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}"
+                    placeholder="e.g. 27AAAAA0000A1Z5"
+                    value="{{ current_user.gstin or '' }}"
+                    style="font-family:monospace;letter-spacing:.04em;"
+                  >
+                  <div class="form-text">15-character GSTIN. Leave blank if you are not GST-registered.</div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-3 align-items-center">
+                  <button type="submit" class="btn btn-gold btn-lg">
+                    {% if is_plan_change and current_status == 'active' %}
+                    Update Plan
+                    {% else %}
+                    Activate Free Trial
+                    {% endif %}
+                  </button>
+                  <span class="text-muted small">No credit card required</span>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

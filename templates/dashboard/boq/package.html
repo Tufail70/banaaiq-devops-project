@@ -1,0 +1,88 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}BOQ Package | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="feature-header compact mb-3">
+  <div>
+    <p class="eyebrow mb-1">BOQ Package</p>
+    <h4 class="mb-1">{{ package.package_name }}</h4>
+    <p class="text-muted mb-0">{{ boq.title if boq else "Bill of Quantities" }}</p>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard_boq_index') }}">
+    <i class="fas fa-arrow-left me-1"></i> BOQs
+  </a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="metric-card">
+      <span class="metric-label">Assigned Engineer</span>
+      <strong>{{ package.assigned_engineer_name or "-" }}</strong>
+      <small>{{ package.assigned_engineer_email or "" }}</small>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card">
+      <span class="metric-label">Trade</span>
+      <strong>{{ package.package_type or "General" }}</strong>
+      <small>{{ package.status|title }}</small>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card">
+      <span class="metric-label">Value</span>
+      <strong>SAR {{ "{:,.2f}".format(package.grand_total_sar or 0) }}</strong>
+      <small>including package totals</small>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="metric-card">
+      <span class="metric-label">Completion</span>
+      <strong>{{ "{:.1f}".format(package.completion_percentage or 0) }}%</strong>
+      <small>{{ tracker.status|default("No actuals")|replace("_", " ")|title }}</small>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Package Items</h5>
+      <span class="badge text-bg-light">{{ package.items|length }} items</span>
+    </div>
+    {% if tracker.rows %}
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Description</th>
+            <th>Budget Qty</th>
+            <th>Actual Qty</th>
+            <th>Remaining</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in tracker.rows %}
+          <tr>
+            <td>{{ row.item_no }}</td>
+            <td>{{ row.description }}</td>
+            <td>{{ "{:,.3f}".format(row.budget_qty) }} {{ row.unit }}</td>
+            <td>{{ "{:,.3f}".format(row.actual_qty) }}</td>
+            <td>{{ "{:,.3f}".format(row.remaining_qty) }}</td>
+            <td><span class="badge text-bg-light">{{ row.status|replace("_", " ")|title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state py-5 text-center">
+      <i class="fas fa-chart-line fa-2x text-muted mb-3"></i>
+      <h6>No progress recorded yet</h6>
+      <p class="text-muted mb-0">Task and DPR progress will appear here once quantities are recorded.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

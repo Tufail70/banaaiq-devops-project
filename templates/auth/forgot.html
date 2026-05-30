@@ -1,0 +1,22 @@
+﻿{% extends "base.html" %}
+{% block title %}Forgot Password | BanaaIQ{% endblock %}
+{% block content %}
+<div class="auth-shell py-5">
+    <div class="container d-flex justify-content-center">
+        <div class="auth-card card border-0 shadow-sm w-100" style="max-width: 420px;">
+            <div class="card-body p-4 p-md-5">
+                <h3 class="mb-3">Forgot Password</h3>
+                <p class="text-muted small">Enter your email address and we will send a reset link.</p>
+                <form method="post" action="{{ url_for('auth_forgot') }}">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.email.id }}">Email</label>
+                        {{ form.email(class_='form-control', placeholder='name@company.com') }}
+                    </div>
+                    <button type="submit" class="btn btn-gold w-100">Send Reset Link</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

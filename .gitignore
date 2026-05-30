@@ -1,0 +1,42 @@
+# Environment variables
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Databases
+*.db
+*.db-journal
+*.sqlite3
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Flask/session/runtime artifacts
+flask_session/
+instance/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# BOQ design uploads
+banaaiq/uploads/boq_designs/*
+
+# Inventory design uploads
+banaaiq/uploads/inventory_designs/
+
+

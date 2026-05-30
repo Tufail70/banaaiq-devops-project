@@ -1,0 +1,316 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Edit Items — {{ boq.title }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div class="flex-grow-1">
+      <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+        <i class="fas fa-pen me-2" style="color:var(--color-gold)"></i>
+        Edit Items — {{ boq.title }}
+      </h4>
+      <small class="text-muted">
+        {% if is_se_editing %}
+          Saving will create a new revision (v{{ (boq.version or 1) + 1 }}) and archive the current version.
+        {% else %}
+          Editing master BOQ in place. Changes are immediate.
+        {% endif %}
+      </small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form id="edit-form" method="POST" action="{{ url_for('boq_edit_items', boq_id=boq.id) }}"
+        onsubmit="return buildPayloadAndSubmit(event)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="sections_json" id="sections_json">
+
+    <div id="sections-container">
+      {% for sec in sections %}
+      {% if sec is mapping %}
+      <div class="section-block card border-0 shadow-sm mb-4"
+           data-trade="{{ sec.get('trade','') | e }}"
+           data-trade-ar="{{ sec.get('trade_ar','') | e }}">
+        <div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--color-navy);color:#fff;">
+          <i class="fas fa-layer-group" style="color:var(--color-gold)"></i>
+          <input type="text" class="section-trade form-control form-control-sm fw-bold"
+                 value="{{ sec.get('trade','') }}" placeholder="Section name (EN)"
+                 style="background:transparent;border:none;color:#fff;max-width:200px;font-weight:600;">
+          <input type="text" class="section-trade-ar form-control form-control-sm"
+                 value="{{ sec.get('trade_ar','') }}" placeholder="القسم" dir="rtl"
+                 style="background:transparent;border:none;color:#fff;max-width:200px;">
+          {% if current_user.role == 'project_manager' %}
+          <button type="button" class="btn btn-sm btn-outline-light ms-auto" onclick="deleteSection(this)">
+            <i class="fas fa-trash-can"></i>
+          </button>
+          {% endif %}
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:50px">#</th>
+                  <th>Description</th>
+                  <th>Arabic</th>
+                  <th style="width:70px">Unit</th>
+                  <th style="width:90px">Qty</th>
+                  <th style="width:100px">Rate SAR</th>
+                  <th style="width:110px">Total SAR</th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in sec.get('items', []) %}
+                {% if item is mapping %}
+                <tr class="item-row">
+                  <td class="text-muted small">{{ item.get('item_no','') }}</td>
+                  <td><input class="form-control form-control-sm item-desc" value="{{ item.get('description','') }}" placeholder="Description" required></td>
+                  <td><input class="form-control form-control-sm item-desc-ar" dir="rtl" value="{{ item.get('description_ar','') }}" placeholder="الوصف"></td>
+                  <td><input class="form-control form-control-sm item-unit" value="{{ item.get('unit','') }}" style="width:65px"></td>
+                  <td><input class="form-control form-control-sm item-qty" type="number" step="0.001" min="0"
+                             value="{{ item.get('qty',0) }}" oninput="calcTotal(this)" style="width:85px"></td>
+                  <td><input class="form-control form-control-sm item-rate" type="number" step="0.01" min="0"
+                             value="{{ item.get('rate_sar',0) }}" oninput="calcTotal(this)" style="width:95px"></td>
+                  <td><input class="form-control form-control-sm item-total bg-light" readonly
+                             value="{{ '{:.2f}'.format(item.get('total_sar',0)|float) }}" style="width:105px"></td>
+                  <td class="text-nowrap">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-1" onclick="toggleItemDetail(this)" title="Details / التفاصيل"><i class="fas fa-expand-alt"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger px-1 ms-1" onclick="removeItem(this)"><i class="fas fa-trash"></i></button>
+                  </td>
+                </tr>
+                <tr class="item-detail-row {% if not (item.get('specification') or item.get('application_notes') or item.get('standard_reference') or item.get('sub_items')) %}d-none{% endif %}">
+                  <td></td>
+                  <td colspan="7">
+                    <div class="row g-2 p-2 rounded" style="background:#f0f4f8;border-left:3px solid var(--color-gold)">
+                      <div class="col-12">
+                        <label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Specification / المواصفة</label>
+                        <input class="form-control form-control-sm item-spec"
+                               value="{{ item.get('specification','') }}"
+                               placeholder="Grade/standard/strength (e.g. Grade C40, SBC 304 compliant)">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Application Notes / ملاحظات التنفيذ</label>
+                        <input class="form-control form-control-sm item-app-notes"
+                               value="{{ item.get('application_notes','') }}"
+                               placeholder="On-site installation / quality notes">
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Standard Reference / المرجع</label>
+                        <input class="form-control form-control-sm item-std-ref"
+                               value="{{ item.get('standard_reference','') }}"
+                               placeholder="e.g. SBC 304-2018, ACI 318">
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">
+                          Sub-Items / المكوّنات
+                          <small class="text-muted fw-normal">(JSON array: [{"name":"...","qty_per_unit":0,"unit":"..."}])</small>
+                        </label>
+                        <textarea class="form-control form-control-sm item-sub-items" rows="2"
+                                  placeholder='[{"name":"Portland Cement V","qty_per_unit":350,"unit":"kg/m3"}]'>{{ item.get('sub_items', []) | tojson }}</textarea>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="px-3 pb-2 pt-1">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItem(this)">
+              <i class="fas fa-plus me-1"></i> Add Item / إضافة بند
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if current_user.role == 'project_manager' %}
+    <button type="button" class="btn btn-outline-secondary mb-4" onclick="addSection()">
+      <i class="fas fa-plus me-1"></i> Add Section / إضافة قسم
+    </button>
+    {% endif %}
+
+    <div class="d-flex gap-2 mt-2">
+      <button type="submit" class="btn fw-semibold" style="background:var(--color-gold);color:#fff;border-color:var(--color-gold);">
+        <i class="fas fa-save me-1"></i>
+        {% if is_se_editing %}Save as Revision{% else %}Save Changes{% endif %} / حفظ
+      </button>
+      <a href="{{ url_for('boq_view', boq_id=boq.id) }}" class="btn btn-outline-secondary">Cancel / إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function calcTotal(el) {
+  var row = el.closest('tr');
+  var qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+  var rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+  row.querySelector('.item-total').value = (qty * rate).toFixed(2);
+}
+
+function toggleItemDetail(btn) {
+  var row = btn.closest('.item-row');
+  var detailRow = row.nextElementSibling;
+  if (detailRow && detailRow.classList.contains('item-detail-row')) {
+    detailRow.classList.toggle('d-none');
+  }
+}
+
+function removeItem(btn) {
+  var row = btn.closest('.item-row');
+  var detailRow = row.nextElementSibling;
+  if (detailRow && detailRow.classList.contains('item-detail-row')) {
+    detailRow.remove();
+  }
+  row.remove();
+}
+
+function addItem(btn) {
+  var tbody = btn.closest('.card').querySelector('tbody');
+
+  var tr = document.createElement('tr');
+  tr.className = 'item-row';
+  tr.innerHTML =
+    '<td class="text-muted small">—</td>' +
+    '<td><input class="form-control form-control-sm item-desc" placeholder="Description" required></td>' +
+    '<td><input class="form-control form-control-sm item-desc-ar" dir="rtl" placeholder="الوصف"></td>' +
+    '<td><input class="form-control form-control-sm item-unit" style="width:65px" placeholder="m3"></td>' +
+    '<td><input class="form-control form-control-sm item-qty" type="number" step="0.001" min="0" value="0"' +
+    '     oninput="calcTotal(this)" style="width:85px"></td>' +
+    '<td><input class="form-control form-control-sm item-rate" type="number" step="0.01" min="0" value="0"' +
+    '     oninput="calcTotal(this)" style="width:95px"></td>' +
+    '<td><input class="form-control form-control-sm item-total bg-light" readonly value="0.00" style="width:105px"></td>' +
+    '<td class="text-nowrap">' +
+    '  <button type="button" class="btn btn-sm btn-outline-secondary px-1" onclick="toggleItemDetail(this)" title="Details"><i class="fas fa-expand-alt"></i></button>' +
+    '  <button type="button" class="btn btn-sm btn-outline-danger px-1 ms-1" onclick="removeItem(this)"><i class="fas fa-trash"></i></button>' +
+    '</td>';
+
+  var trDetail = document.createElement('tr');
+  trDetail.className = 'item-detail-row d-none';
+  trDetail.innerHTML =
+    '<td></td>' +
+    '<td colspan="7">' +
+    '  <div class="row g-2 p-2 rounded" style="background:#f0f4f8;border-left:3px solid var(--color-gold)">' +
+    '    <div class="col-12"><label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Specification / المواصفة</label>' +
+    '      <input class="form-control form-control-sm item-spec" placeholder="Grade/standard/strength"></div>' +
+    '    <div class="col-md-6"><label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Application Notes / ملاحظات التنفيذ</label>' +
+    '      <input class="form-control form-control-sm item-app-notes" placeholder="On-site installation / quality notes"></div>' +
+    '    <div class="col-md-6"><label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Standard Reference / المرجع</label>' +
+    '      <input class="form-control form-control-sm item-std-ref" placeholder="e.g. SBC 304-2018, ACI 318"></div>' +
+    '    <div class="col-12"><label class="form-label form-label-sm fw-semibold mb-1" style="color:var(--color-navy)">Sub-Items / المكوّنات</label>' +
+    '      <textarea class="form-control form-control-sm item-sub-items" rows="2"' +
+    '        placeholder=\'[{"name":"Portland Cement V","qty_per_unit":350,"unit":"kg/m3"}]\'></textarea></div>' +
+    '  </div>' +
+    '</td>';
+
+  tbody.appendChild(tr);
+  tbody.appendChild(trDetail);
+}
+
+function deleteSection(btn) {
+  if (document.querySelectorAll('.section-block').length <= 1) {
+    alert('At least one section is required. / يجب وجود قسم واحد على الأقل.');
+    return;
+  }
+  btn.closest('.section-block').remove();
+}
+
+function addSection() {
+  var container = document.getElementById('sections-container');
+  var div = document.createElement('div');
+  div.className = 'section-block card border-0 shadow-sm mb-4';
+  div.innerHTML =
+    '<div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--color-navy);color:#fff;">' +
+    '  <i class="fas fa-layer-group" style="color:var(--color-gold)"></i>' +
+    '  <input type="text" class="section-trade form-control form-control-sm fw-bold" placeholder="Section name (EN)"' +
+    '         style="background:transparent;border:none;color:#fff;max-width:200px;font-weight:600;">' +
+    '  <input type="text" class="section-trade-ar form-control form-control-sm" placeholder="اسم القسم" dir="rtl"' +
+    '         style="background:transparent;border:none;color:#fff;max-width:200px;">' +
+    '  <button type="button" class="btn btn-sm btn-outline-light ms-auto" onclick="deleteSection(this)">' +
+    '    <i class="fas fa-trash-can"></i></button>' +
+    '</div>' +
+    '<div class="card-body p-0">' +
+    '  <div class="table-responsive">' +
+    '    <table class="table table-sm table-hover align-middle mb-0">' +
+    '      <thead class="table-light"><tr>' +
+    '        <th style="width:50px">#</th><th>Description</th><th>Arabic</th>' +
+    '        <th style="width:70px">Unit</th><th style="width:90px">Qty</th>' +
+    '        <th style="width:100px">Rate SAR</th><th style="width:110px">Total SAR</th>' +
+    '        <th style="width:60px"></th>' +
+    '      </tr></thead>' +
+    '      <tbody></tbody>' +
+    '    </table>' +
+    '  </div>' +
+    '  <div class="px-3 pb-2 pt-1">' +
+    '    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItem(this)">' +
+    '      <i class="fas fa-plus me-1"></i> Add Item / إضافة بند</button>' +
+    '  </div>' +
+    '</div>';
+  container.appendChild(div);
+  addItem(div.querySelector('[onclick="addItem(this)"]'));
+}
+
+function buildPayloadAndSubmit(e) {
+  var sections = [];
+  document.querySelectorAll('.section-block').forEach(function(sec, sIdx) {
+    var trade = sec.querySelector('.section-trade').value.trim();
+    var trade_ar = sec.querySelector('.section-trade-ar').value.trim();
+    var items = [];
+    var iNum = 1;
+    sec.querySelectorAll('.item-row').forEach(function(row) {
+      var desc = row.querySelector('.item-desc').value.trim();
+      if (!desc) return;
+      var detailRow = row.nextElementSibling;
+      var isDetail = detailRow && detailRow.classList.contains('item-detail-row');
+      var spec = isDetail ? (detailRow.querySelector('.item-spec') ? detailRow.querySelector('.item-spec').value.trim() : '') : '';
+      var notes = isDetail ? (detailRow.querySelector('.item-app-notes') ? detailRow.querySelector('.item-app-notes').value.trim() : '') : '';
+      var stdRef = isDetail ? (detailRow.querySelector('.item-std-ref') ? detailRow.querySelector('.item-std-ref').value.trim() : '') : '';
+      var subItems = [];
+      if (isDetail) {
+        var subTa = detailRow.querySelector('.item-sub-items');
+        if (subTa && subTa.value.trim()) {
+          try { subItems = JSON.parse(subTa.value.trim()); } catch(err) { subItems = []; }
+        }
+      }
+      items.push({
+        item_no: (sIdx + 1) + '.' + (iNum++),
+        description: desc,
+        description_ar: row.querySelector('.item-desc-ar').value.trim(),
+        unit: row.querySelector('.item-unit').value.trim(),
+        qty: parseFloat(row.querySelector('.item-qty').value) || 0,
+        rate_sar: parseFloat(row.querySelector('.item-rate').value) || 0,
+        total_sar: parseFloat(row.querySelector('.item-total').value) || 0,
+        specification: spec,
+        application_notes: notes,
+        standard_reference: stdRef,
+        sub_items: subItems,
+      });
+    });
+    if (trade && items.length) {
+      sections.push({ trade: trade, trade_ar: trade_ar, items: items });
+    }
+  });
+  if (!sections.length) {
+    e.preventDefault();
+    alert('Please add at least one section with at least one item. / يرجى إضافة قسم بعنصر واحد على الأقل.');
+    return false;
+  }
+  document.getElementById('sections_json').value = JSON.stringify(sections);
+  return true;
+}
+</script>
+{% endblock %}

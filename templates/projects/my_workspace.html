@@ -1,0 +1,79 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}My Workspace / مساحة عملي{% endblock %}
+{% block dashboard_content %}
+<div class="project-page">
+    <div class="project-workspace-hero">
+        <div>
+            <h3 class="mt-2 mb-1">My Workspace <span class="text-muted" style="font-size:0.7em;">/ مساحة عملي</span></h3>
+            <p class="mb-0">Your assigned projects and work items</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat == 'success' else ('warning' if cat == 'warning' else 'danger') }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% if not projects_data %}
+    <div class="content-card text-center py-5">
+        <i class="fa fa-folder-open fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No projects assigned yet / لا توجد مشاريع مسندة</h5>
+        <p class="text-muted small">Your project manager will assign you to a project.</p>
+    </div>
+    {% else %}
+    <div class="row g-3 mt-1">
+        {% for pd in projects_data %}
+        {% set proj = pd.project %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ url_for('my_workspace_project', project_id=proj.id) }}" class="text-decoration-none">
+                <div class="content-card h-100 project-card-hover" style="border-left: 4px solid {{ proj.color or '#0B3C5D' }};">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="project-code-badge small">{{ proj.project_code }}</span>
+                        <span class="badge bg-{{ 'success' if proj.status == 'active' else 'secondary' }}">{{ proj.status.title() }}</span>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1">{{ proj.name }}</h6>
+                    <p class="text-muted small mb-3">{{ proj.client_name or 'Client not set' }}</p>
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <div class="stat-mini">
+                                <span class="stat-number">{{ pd.package_count }}</span>
+                                <span class="stat-label">BOQ Pkgs</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-mini">
+                                <span class="stat-number">{{ pd.materials_count }}</span>
+                                <span class="stat-label">Materials</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-mini">
+                                <span class="stat-number text-{{ 'danger' if pd.open_task_count > 0 else 'success' }}">{{ pd.open_task_count }}</span>
+                                <span class="stat-label">Open Tasks</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if pd.last_dpr_date %}
+                    <p class="text-muted small mt-2 mb-0"><i class="fa fa-calendar me-1"></i>Last DPR: {{ pd.last_dpr_date }}</p>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.project-card-hover { transition: box-shadow 0.2s, transform 0.2s; }
+.project-card-hover:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.stat-mini { display: flex; flex-direction: column; align-items: center; }
+.stat-number { font-size: 1.3rem; font-weight: 700; color: #0B3C5D; }
+.stat-label { font-size: 0.65rem; color: #6c757d; }
+</style>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}New Task | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width:720px;">
+
+  {# Breadcrumb #}
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('dashboard_tasks') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Tasks
+    </a>
+    <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+      <i class="fas fa-plus-circle me-2" style="color:#F59E0B;"></i>
+      New Task <small class="text-muted fs-6">/ مهمة جديدة</small>
+    </h4>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('task_new') }}" id="task-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="content-card p-4">
+
+      {# Task name + voice #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          Task Name <span class="text-danger">*</span>
+          <small class="text-muted fw-normal ms-1">/ اسم المهمة</small>
+        </label>
+        <div class="input-group">
+          <input type="text" name="name" id="task-name" class="form-control"
+                 placeholder="e.g. Install electrical panels on floor 3…"
+                 maxlength="200" required>
+          <button type="button" class="btn btn-outline-secondary" id="voice-btn"
+                  title="Dictate task name" onclick="startVoice()">
+            <i class="fas fa-microphone"></i>
+          </button>
+        </div>
+        <div id="voice-status" class="form-text text-muted" style="display:none;">
+          <span class="spinner-border spinner-border-sm me-1"></span> Listening…
+        </div>
+      </div>
+
+      {# Project #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          Project <span class="text-danger">*</span>
+          <small class="text-muted fw-normal ms-1">/ المشروع</small>
+        </label>
+        <select name="project_id" id="project-select" class="form-select" required
+                onchange="loadMembers(this.value)">
+          <option value="">— Select project —</option>
+          {% for p in projects %}
+          <option value="{{ p.id }}"
+                  {{ 'selected' if preselect_project_id and preselect_project_id == p.id else '' }}>
+            {{ p.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Assignee (dynamic) #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          Assigned To <span class="text-danger">*</span>
+          <small class="text-muted fw-normal ms-1">/ مسند إليه</small>
+        </label>
+        <select name="assigned_to_id" id="assignee-select" class="form-select" required>
+          <option value="">— Select project first —</option>
+        </select>
+      </div>
+
+      <div class="row g-3 mb-3">
+        {# Status #}
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Status / الحالة</label>
+          <select name="status" class="form-select">
+            {% for key, label in task_status_labels.items() %}
+            <option value="{{ key }}" {{ 'selected' if key == 'not_started' else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {# Priority #}
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Priority / الأولوية</label>
+          <select name="priority" class="form-select">
+            <option value="low">Low / منخفض</option>
+            <option value="normal" selected>Normal / عادي</option>
+            <option value="high">High / عالي</option>
+            <option value="urgent">Urgent / عاجل</option>
+          </select>
+        </div>
+      </div>
+
+      {# Due date #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Due Date <small class="text-muted fw-normal">/ تاريخ الاستحقاق (optional)</small></label>
+        <input type="date" name="due_date" class="form-control" style="max-width:220px;">
+      </div>
+
+      {# Description #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          Description <small class="text-muted fw-normal">/ الوصف (optional)</small>
+        </label>
+        <textarea name="description" class="form-control" rows="3"
+                  placeholder="Describe the task…"></textarea>
+      </div>
+
+      {# Remarks #}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          Remarks <small class="text-muted fw-normal">/ ملاحظات (optional)</small>
+        </label>
+        <textarea name="remarks" class="form-control" rows="2"
+                  placeholder="Any notes for the assignee…"></textarea>
+      </div>
+
+      {# Dependency #}
+      <div class="mb-4" id="dep-section" style="display:none;">
+        <label class="form-label fw-semibold">
+          Depends On <small class="text-muted fw-normal">/ يعتمد على (optional)</small>
+        </label>
+        <select name="depends_on_task_id" id="dep-select" class="form-select">
+          <option value="">None</option>
+        </select>
+      </div>
+
+      {# Actions #}
+      <div class="d-flex gap-2 align-items-center">
+        <button type="submit" class="btn btn-gold fw-semibold px-4">
+          <i class="fas fa-check me-1"></i> Create Task / إنشاء المهمة
+        </button>
+        <a href="{{ url_for('dashboard_tasks') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+
+<script>
+// ── Dynamic member/dep loader ────────────────────────────────────────────
+function loadMembers(projectId) {
+  var sel = document.getElementById('assignee-select');
+  var dep = document.getElementById('dep-select');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  dep.innerHTML = '<option value="">None</option>';
+  document.getElementById('dep-section').style.display = 'none';
+  if (!projectId) { sel.innerHTML = '<option value="">— Select project first —</option>'; return; }
+  fetch('/api/projects/' + projectId + '/members')
+    .then(r => r.json())
+    .then(data => {
+      sel.innerHTML = '<option value="">— Select assignee —</option>';
+      (data.members || []).forEach(m => {
+        var opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + ' (' + m.role + ')';
+        sel.appendChild(opt);
+      });
+    })
+    .catch(() => { sel.innerHTML = '<option value="">Error loading members</option>'; });
+  // Load existing tasks in project for dependency picker
+  fetch('/api/projects/' + projectId + '/tasks')
+    .then(r => r.json())
+    .then(data => {
+      if (data.tasks && data.tasks.length > 0) {
+        dep.innerHTML = '<option value="">None</option>';
+        data.tasks.forEach(t => {
+          var opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.name;
+          dep.appendChild(opt);
+        });
+        document.getElementById('dep-section').style.display = '';
+      }
+    })
+    .catch(() => {});
+}
+
+// Trigger on page load if project pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+  var sel = document.getElementById('project-select');
+  if (sel.value) loadMembers(sel.value);
+});
+
+// ── Voice input ───────────────────────────────────────────────────────────
+var _mediaRecorder = null, _chunks = [];
+function startVoice() {
+  var btn = document.getElementById('voice-btn');
+  var status = document.getElementById('voice-status');
+  if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+    _mediaRecorder.stop();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    _chunks = [];
+    _mediaRecorder = new MediaRecorder(stream);
+    _mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) _chunks.push(e.data); };
+    _mediaRecorder.onstop = function() {
+      stream.getTracks().forEach(t => t.stop());
+      btn.innerHTML = '<i class="fas fa-microphone"></i>';
+      status.style.display = 'none';
+      var blob = new Blob(_chunks, { type: 'audio/webm' });
+      var fd = new FormData();
+      fd.append('audio', blob, 'voice.webm');
+      fetch('/api/tasks/transcribe', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.text) {
+            document.getElementById('task-name').value = data.text.trim();
+          } else {
+            alert('Transcription failed: ' + (data.error || 'unknown error'));
+          }
+        })
+        .catch(() => alert('Voice transcription failed.'));
+    };
+    _mediaRecorder.start();
+    btn.innerHTML = '<i class="fas fa-stop text-danger"></i>';
+    status.style.display = '';
+  }).catch(function(e) {
+    alert('Microphone access denied: ' + e.message);
+  });
+}
+</script>
+{% endblock %}

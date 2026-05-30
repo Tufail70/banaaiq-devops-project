@@ -1,0 +1,228 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Create BOQ Manually | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('dashboard_boq_index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+        <i class="fas fa-pen-to-square me-2" style="color:var(--color-gold)"></i>
+        Create BOQ Manually / إنشاء جدول يدوي
+      </h4>
+      <small class="text-muted">Build a BOQ from scratch without AI generation.</small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form id="create-form" method="POST" action="{{ url_for('boq_create_manual') }}"
+        onsubmit="return buildPayloadAndSubmit(event)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="sections_json" id="sections_json">
+
+    {# Meta fields #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Project / المشروع <span class="text-danger">*</span></label>
+            <select name="project_id" class="form-select" required>
+              <option value="">— Select project —</option>
+              {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">BOQ Title / العنوان <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" placeholder="e.g., Villa BOQ — Civil Works" required maxlength="200">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Sections #}
+    <div id="sections-container">
+      {# Initial empty section #}
+      <div class="section-block card border-0 shadow-sm mb-4">
+        <div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--color-navy);color:#fff;">
+          <i class="fas fa-layer-group" style="color:var(--color-gold)"></i>
+          <input type="text" class="section-trade form-control form-control-sm fw-bold"
+                 placeholder="Section name (EN)" value="Civil"
+                 style="background:transparent;border:none;color:#fff;max-width:200px;font-weight:600;">
+          <input type="text" class="section-trade-ar form-control form-control-sm"
+                 placeholder="اسم القسم" value="أعمال مدنية" dir="rtl"
+                 style="background:transparent;border:none;color:#fff;max-width:200px;">
+          <button type="button" class="btn btn-sm btn-outline-light ms-auto" onclick="deleteSection(this)">
+            <i class="fas fa-trash-can"></i>
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:50px">#</th>
+                  <th>Description</th>
+                  <th>Arabic</th>
+                  <th style="width:70px">Unit</th>
+                  <th style="width:90px">Qty</th>
+                  <th style="width:100px">Rate SAR</th>
+                  <th style="width:110px">Total SAR</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="item-row">
+                  <td class="text-muted small">1.1</td>
+                  <td><input class="form-control form-control-sm item-desc" placeholder="Description" required></td>
+                  <td><input class="form-control form-control-sm item-desc-ar" dir="rtl" placeholder="الوصف"></td>
+                  <td><input class="form-control form-control-sm item-unit" style="width:65px" placeholder="m3"></td>
+                  <td><input class="form-control form-control-sm item-qty" type="number" step="0.001" min="0" value="0"
+                             oninput="calcTotal(this)" style="width:85px"></td>
+                  <td><input class="form-control form-control-sm item-rate" type="number" step="0.01" min="0" value="0"
+                             oninput="calcTotal(this)" style="width:95px"></td>
+                  <td><input class="form-control form-control-sm item-total bg-light" readonly value="0.00" style="width:105px"></td>
+                  <td><button type="button" class="btn btn-sm btn-outline-danger px-1" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="px-3 pb-2 pt-1">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItem(this)">
+              <i class="fas fa-plus me-1"></i> Add Item
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-outline-secondary mb-4" onclick="addSection()">
+      <i class="fas fa-plus me-1"></i> Add Section / إضافة قسم
+    </button>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn fw-semibold" style="background:var(--color-gold);color:#fff;border-color:var(--color-gold);">
+        <i class="fas fa-save me-1"></i> Create BOQ / إنشاء الجدول
+      </button>
+      <a href="{{ url_for('dashboard_boq_index') }}" class="btn btn-outline-secondary">Cancel / إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function calcTotal(el) {
+  const row = el.closest('tr');
+  const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+  const rate = parseFloat(row.querySelector('.item-rate').value) || 0;
+  row.querySelector('.item-total').value = (qty * rate).toFixed(2);
+}
+
+function addItem(btn) {
+  const tbody = btn.closest('.card').querySelector('tbody');
+  const tr = document.createElement('tr');
+  tr.className = 'item-row';
+  tr.innerHTML = `
+    <td class="text-muted small">—</td>
+    <td><input class="form-control form-control-sm item-desc" placeholder="Description" required></td>
+    <td><input class="form-control form-control-sm item-desc-ar" dir="rtl" placeholder="الوصف"></td>
+    <td><input class="form-control form-control-sm item-unit" style="width:65px" placeholder="m3"></td>
+    <td><input class="form-control form-control-sm item-qty" type="number" step="0.001" min="0" value="0"
+              oninput="calcTotal(this)" style="width:85px"></td>
+    <td><input class="form-control form-control-sm item-rate" type="number" step="0.01" min="0" value="0"
+              oninput="calcTotal(this)" style="width:95px"></td>
+    <td><input class="form-control form-control-sm item-total bg-light" readonly value="0.00" style="width:105px"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger px-1" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>`;
+  tbody.appendChild(tr);
+}
+
+function deleteSection(btn) {
+  if (document.querySelectorAll('.section-block').length <= 1) {
+    alert('At least one section is required.');
+    return;
+  }
+  btn.closest('.section-block').remove();
+}
+
+function addSection() {
+  const container = document.getElementById('sections-container');
+  const count = container.querySelectorAll('.section-block').length + 1;
+  const div = document.createElement('div');
+  div.className = 'section-block card border-0 shadow-sm mb-4';
+  div.innerHTML = `
+    <div class="card-header d-flex align-items-center gap-2 py-2" style="background:var(--color-navy);color:#fff;">
+      <i class="fas fa-layer-group" style="color:var(--color-gold)"></i>
+      <input type="text" class="section-trade form-control form-control-sm fw-bold" placeholder="Section name (EN)"
+             style="background:transparent;border:none;color:#fff;max-width:200px;font-weight:600;">
+      <input type="text" class="section-trade-ar form-control form-control-sm" placeholder="اسم القسم" dir="rtl"
+             style="background:transparent;border:none;color:#fff;max-width:200px;">
+      <button type="button" class="btn btn-sm btn-outline-light ms-auto" onclick="deleteSection(this)">
+        <i class="fas fa-trash-can"></i>
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:50px">#</th><th>Description</th><th>Arabic</th>
+              <th style="width:70px">Unit</th><th style="width:90px">Qty</th>
+              <th style="width:100px">Rate SAR</th><th style="width:110px">Total SAR</th><th style="width:40px"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="px-3 pb-2 pt-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addItem(this)">
+          <i class="fas fa-plus me-1"></i> Add Item
+        </button>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  addItem(div.querySelector('[onclick="addItem(this)"]'));
+}
+
+function buildPayloadAndSubmit(e) {
+  const sections = [];
+  document.querySelectorAll('.section-block').forEach((sec, sIdx) => {
+    const trade = sec.querySelector('.section-trade').value.trim();
+    const trade_ar = sec.querySelector('.section-trade-ar').value.trim();
+    const items = [];
+    let iNum = 1;
+    sec.querySelectorAll('.item-row').forEach(row => {
+      const desc = row.querySelector('.item-desc').value.trim();
+      if (!desc) return;
+      items.push({
+        item_no: `${sIdx + 1}.${iNum++}`,
+        description: desc,
+        description_ar: row.querySelector('.item-desc-ar').value.trim(),
+        unit: row.querySelector('.item-unit').value.trim(),
+        qty: parseFloat(row.querySelector('.item-qty').value) || 0,
+        rate_sar: parseFloat(row.querySelector('.item-rate').value) || 0,
+        total_sar: parseFloat(row.querySelector('.item-total').value) || 0,
+      });
+    });
+    if (trade && items.length) {
+      sections.push({ trade, trade_ar, items });
+    }
+  });
+  if (!sections.length) {
+    e.preventDefault();
+    alert('Please add at least one section with at least one item.');
+    return false;
+  }
+  document.getElementById('sections_json').value = JSON.stringify(sections);
+  return true;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════
+   BanaaIQ RTL Stylesheet
+   For Arabic language direction only
+   IMPORTANT: Never use * selector here
+   IMPORTANT: Never use !important on font-family
+              for body or * selectors
+   ═══════════════════════════════════════════ */
+
+/* Global direction */
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Navbar */
+html[dir="rtl"] .navbar-nav {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .navbar-brand {
+  margin-right: 0;
+  margin-left: auto;
+}
+html[dir="rtl"] .dropdown-menu {
+  right: 0;
+  left: auto;
+  text-align: right;
+}
+
+/* Sidebar */
+html[dir="rtl"] #sidebar,
+html[dir="rtl"] .sidebar {
+  right: 0;
+  left: auto;
+  border-right: none;
+  border-left: 1px solid rgba(255,255,255,0.1);
+}
+html[dir="rtl"] .main-content {
+  margin-right: 250px;
+  margin-left: 0;
+}
+html[dir="rtl"] .sidebar-link {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* Sidebar icon spacing fix */
+html[dir="rtl"] .sidebar-link i,
+html[dir="rtl"] .sidebar-link .fa,
+html[dir="rtl"] .sidebar-link [class*="fa-"] {
+  margin-right: 0 !important;
+  margin-left: 10px !important;
+  /* font-family is NOT touched here */
+}
+
+/* Forms */
+html[dir="rtl"] .form-control,
+html[dir="rtl"] .form-select,
+html[dir="rtl"] textarea {
+  direction: rtl;
+  text-align: right;
+}
+html[dir="rtl"] .form-label {
+  display: block;
+  text-align: right;
+}
+html[dir="rtl"] .input-group {
+  flex-direction: row-reverse;
+}
+
+/* Cards */
+html[dir="rtl"] .card-body {
+  text-align: right;
+}
+html[dir="rtl"] .card-header {
+  text-align: right;
+}
+
+/* Tables */
+html[dir="rtl"] table {
+  direction: rtl;
+}
+html[dir="rtl"] th,
+html[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Buttons — only flip padding not font */
+html[dir="rtl"] .btn i,
+html[dir="rtl"] .btn .fa,
+html[dir="rtl"] .btn [class*="fa-"] {
+  margin-right: 0 !important;
+  margin-left: 6px !important;
+}
+
+/* Modals */
+html[dir="rtl"] .modal-header {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .modal-footer {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .modal-body {
+  text-align: right;
+  direction: rtl;
+}
+html[dir="rtl"] .modal-title {
+  text-align: right;
+}
+
+/* Alerts */
+html[dir="rtl"] .alert {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Lists */
+html[dir="rtl"] ul,
+html[dir="rtl"] ol {
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+/* Notifications panel */
+html[dir="rtl"] #notifications-panel {
+  right: auto !important;
+  left: 0 !important;
+  direction: rtl;
+}
+html[dir="rtl"] #notifications-overlay {
+  direction: rtl;
+}
+
+/* Footer */
+html[dir="rtl"] footer {
+  direction: rtl;
+  text-align: right;
+}
+html[dir="rtl"] footer .col {
+  text-align: right;
+}
+
+/* Progress bars */
+html[dir="rtl"] .progress {
+  direction: rtl;
+}
+
+/* Badges */
+html[dir="rtl"] .badge {
+  direction: rtl;
+}
+
+/* Activity feed */
+html[dir="rtl"] .activity-item {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* Kanban */
+html[dir="rtl"] .kanban-board {
+  direction: rtl;
+}
+
+/* Blog and public pages */
+html[dir="rtl"] .blog-card {
+  text-align: right;
+  direction: rtl;
+}
+html[dir="rtl"] .contact-form {
+  direction: rtl;
+}
+html[dir="rtl"] .hero-section {
+  text-align: right;
+  direction: rtl;
+}
+html[dir="rtl"] .feature-card {
+  text-align: right;
+  direction: rtl;
+}
+

@@ -1,0 +1,195 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ tr('Upload & Analyze BOQ', 'تحميل وتحليل الكميات') }}{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-4 py-3" style="max-width:720px">
+
+  {# Breadcrumb #}
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{{ url_for('dashboard_boq_index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:var(--color-navy)">
+        <i class="fas fa-file-arrow-up me-2" style="color:var(--color-gold)"></i>
+        {{ tr('Upload & Analyze BOQ', 'تحميل وتحليل جدول الكميات') }}
+      </h4>
+      <small class="text-muted">
+        {{ tr('Upload an existing BOQ file and let AI analyze it from your role perspective.',
+             'حمّل ملف جدول كميات واترك الذكاء الاصطناعي يحلله من منظور دورك.') }}
+      </small>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ 'success' if cat == 'success' else ('warning' if cat == 'warning' else 'danger') }} alert-dismissible fade show">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <form method="POST"
+            action="{{ url_for('boq_analyze_upload') }}"
+            enctype="multipart/form-data"
+            id="analyze-upload-form"
+            data-ai-form="true">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# Project #}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            {{ tr('Project', 'المشروع') }}
+            <span class="text-danger">*</span>
+          </label>
+          {% if projects %}
+          <select name="project_id" class="form-select" required>
+            <option value="">{{ tr('Select project…', 'اختر المشروع…') }}</option>
+            {% for proj in projects %}
+            <option value="{{ proj.id }}">{{ proj.name }} ({{ proj.project_code or '—' }})</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <div class="alert alert-warning py-2 mb-0">
+            {{ tr('You are not assigned to any project yet. Ask your project manager to add you.',
+                 'لم يتم تعيينك في أي مشروع بعد. اطلب من مدير المشروع إضافتك.') }}
+          </div>
+          {% endif %}
+        </div>
+
+        {# Role selection #}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            {{ tr('Reviewing Role', 'دور المراجعة') }}
+            <span class="text-danger">*</span>
+          </label>
+          <select name="role" class="form-select" id="role-select">
+            {% for role in se_roles %}
+            <option value="{{ role }}" {% if role == default_role %}selected{% endif %}>{{ role }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text text-muted mt-1">
+            {{ tr('Your default role is', 'دورك الافتراضي هو') }}
+            <strong id="default-role-badge" class="text-gold">{{ default_role }}</strong>.
+            {{ tr('Change only if this BOQ requires a different perspective.',
+                 'غيّره فقط إذا كان هذا الجدول يتطلب منظوراً مختلفاً.') }}
+          </div>
+        </div>
+
+        {# File upload #}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            {{ tr('BOQ File', 'ملف جدول الكميات') }}
+            <span class="text-danger">*</span>
+          </label>
+          <input type="file"
+                 name="boq_file"
+                 class="form-control"
+                 accept=".xlsx,.xls,.pdf"
+                 required>
+          <div class="form-text text-muted">
+            {{ tr('Accepted: .xlsx, .xls, .pdf · Max 10 MB', 'يُقبل: .xlsx، .xls، .pdf · الحد الأقصى 10 ميغابايت') }}
+          </div>
+        </div>
+
+        {# Adjustment description #}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            {{ tr('What do you want to analyze or adjust?', 'ما الذي تريد تحليله أو تعديله؟') }}
+            <small class="text-muted fw-normal ms-1">— {{ tr('optional', 'اختياري') }}</small>
+          </label>
+          <div class="position-relative">
+            <textarea name="adjustment"
+                      id="analyze-description"
+                      class="form-control"
+                      rows="3"
+                      maxlength="2000"
+                      placeholder="{{ tr('e.g. Review for missing MEP items / تحقق من بنود MEP المفقودة', 'e.g. Review for missing MEP items / تحقق من بنود MEP المفقودة') }}"
+                      style="padding-right:50px;"></textarea>
+            <button type="button"
+                    id="analyze-mic-btn"
+                    title="{{ tr('Click to speak', 'انقر للتحدث') }}"
+                    onclick="toggleAnalyzeMic()"
+                    style="position:absolute;bottom:10px;right:10px;width:34px;height:34px;border-radius:50%;background:var(--color-navy);border:none;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <i class="fa fa-microphone" id="analyze-mic-icon" style="font-size:13px;"></i>
+            </button>
+          </div>
+          <div id="analyze-voice-status" style="display:none;margin-top:6px;">
+            <div style="display:flex;align-items:center;gap:8px;background:#fff5f5;border:1px solid #dc3545;border-radius:8px;padding:7px 12px;font-size:12px;color:#dc3545;font-weight:600;">
+              <span style="width:8px;height:8px;border-radius:50%;background:#dc3545;animation:pulse 1s infinite;flex-shrink:0;"></span>
+              {{ tr('Recording — speak now', 'جارٍ التسجيل — تحدث الآن') }}
+              <span style="margin-left:auto;color:#6c757d;font-weight:400;">{{ tr('Click mic to stop', 'انقر للإيقاف') }}</span>
+            </div>
+          </div>
+        </div>
+
+        {# Submit #}
+        <div class="d-flex gap-2">
+          <button type="submit"
+                  class="btn btn-gold fw-semibold flex-grow-1"
+                  id="analyze-submit-btn">
+            <span id="analyze-submit-label">
+              <i class="fas fa-wand-magic-sparkles me-2"></i>
+              {{ tr('Upload & Analyze', 'تحميل وتحليل') }}
+            </span>
+            <span id="analyze-loading" style="display:none;">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              {{ tr('Analyzing…', 'جارٍ التحليل…') }}
+            </span>
+          </button>
+          <a href="{{ url_for('dashboard_boq_index') }}" class="btn btn-outline-secondary">
+            {{ tr('Cancel', 'إلغاء') }}
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Loading spinner on submit
+document.getElementById('analyze-upload-form').addEventListener('submit', function() {
+  document.getElementById('analyze-submit-label').style.display = 'none';
+  document.getElementById('analyze-loading').style.display = 'inline-flex';
+  document.getElementById('analyze-submit-btn').disabled = true;
+});
+
+// Basic voice recording for adjustment textarea
+var _analyzeRecognition = null;
+var _analyzeMicActive = false;
+
+function toggleAnalyzeMic() {
+  if (_analyzeMicActive) {
+    if (_analyzeRecognition) _analyzeRecognition.stop();
+    return;
+  }
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('{{ tr("Voice input not supported in this browser.", "إدخال الصوت غير مدعوم في هذا المتصفح.") }}');
+    return;
+  }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _analyzeRecognition = new SR();
+  _analyzeRecognition.continuous = false;
+  _analyzeRecognition.interimResults = false;
+  _analyzeRecognition.lang = 'en-US';
+  _analyzeRecognition.onstart = function() {
+    _analyzeMicActive = true;
+    document.getElementById('analyze-mic-btn').style.background = '#dc3545';
+    document.getElementById('analyze-voice-status').style.display = 'block';
+  };
+  _analyzeRecognition.onresult = function(e) {
+    var transcript = e.results[0][0].transcript;
+    var ta = document.getElementById('analyze-description');
+    ta.value = ta.value ? ta.value + ' ' + transcript : transcript;
+  };
+  _analyzeRecognition.onend = function() {
+    _analyzeMicActive = false;
+    document.getElementById('analyze-mic-btn').style.background = 'var(--color-navy)';
+    document.getElementById('analyze-voice-status').style.display = 'none';
+  };
+  _analyzeRecognition.start();
+}
+</script>
+{% endblock %}

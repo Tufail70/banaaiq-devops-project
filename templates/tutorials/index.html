@@ -1,0 +1,68 @@
+﻿{% extends "tutorials/base_tutorials.html" %}
+{% block title %}Tutorials | Getting Started{% endblock %}
+{% block tutorial_content %}
+<div class="content-card p-4">
+    <div class="mb-4">
+        <h3 class="mb-2">Getting Started Onboarding Tour</h3>
+        <p class="text-muted mb-0">Use this 5-step tour to configure your first project workspace and train site teams on the core workflows.</p>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="border rounded p-3 h-100">
+                <h5 class="mb-3">Featured Walkthrough Summary</h5>
+                <p class="text-muted mb-2">Use the onboarding flow below as the primary text-only walkthrough for setting up your first workspace.</p>
+                <p class="text-muted mb-0">It covers project setup, DPR submission, inventory thresholds, and task coordination in a sequence that supervisors and engineers can follow easily.</p>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="border rounded p-3 h-100">
+                <h5 class="mb-3">Onboarding Reference Notes</h5>
+                <p class="text-muted mb-2">Keep this page text-only for now while tutorial media is being prepared.</p>
+                <p class="text-muted mb-0">Later, videos, screenshots, and downloadable references can be added back once the final training assets are ready.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="onboardingTour" class="onboarding-tour">
+        <div class="tour-step active" data-step="1">
+            <h5>Step 1: Welcome to BanaaIQ</h5>
+            <p>BanaaIQ centralizes DPRs, BOQ tracking, inventory, and collaboration for multilingual project teams in Saudi Arabia.</p>
+        </div>
+        <div class="tour-step" data-step="2">
+            <h5>Step 2: Set Up Your First Project</h5>
+            <p>Create your project profile, define zones and workfronts, and assign package owners before daily reporting starts.</p>
+            <div class="border rounded p-3 bg-light">Tip: create a unique project entry for each jobsite so reports, tasks, and inventory stay separated.</div>
+        </div>
+        <div class="tour-step" data-step="3">
+            <h5>Step 3: Submit a Daily Progress Report</h5>
+            <p>Capture quantities, labor, equipment, photos, and constraints. AI summaries help supervisors and PMs review outcomes quickly.</p>
+        </div>
+        <div class="tour-step" data-step="4">
+            <h5>Step 4: Manage Your Inventory</h5>
+            <p>Set reorder thresholds for major materials and monitor live low-stock alerts to prevent site delays from stockouts.</p>
+        </div>
+        <div class="tour-step" data-step="5">
+            <h5>Step 5: Coordinate Tasks By Project</h5>
+            <p>Keep task boards isolated by project so each team only sees the actions, due dates, and blockers for its own jobsite.</p>
+        </div>
+
+        <div class="tour-footer mt-4">
+            <div class="d-flex align-items-center gap-2">
+                <span id="tourProgressText">Step 1 of 5</span>
+                <div class="step-dots" id="tourDots">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-gold" id="tourBack" type="button" disabled>Back</button>
+                <button class="btn btn-gold" id="tourNext" type="button">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

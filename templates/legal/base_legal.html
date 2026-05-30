@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width,
+                 initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{% block page_title %}Legal{% endblock %}
+    — BanaaIQ</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0;
+        padding: 0; }
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #333;
+      background: #f8f9fa;
+      line-height: 1.6;
+    }
+
+    /* -- TOP BAR -- */
+    .legal-topbar {
+      background: #0B3C5D;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .legal-topbar .brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: #F59E0B;
+      text-decoration: none;
+    }
+    .legal-topbar .back-link {
+      font-size: 13px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legal-topbar .back-link:hover {
+      color: white;
+    }
+
+    /* -- PAGE WRAPPER -- */
+    .legal-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* -- HEADER CARD -- */
+    .legal-header {
+      background: #0B3C5D;
+      border-radius:8px;
+      padding: 32px;
+      margin-bottom: 32px;
+      color: white;
+    }
+    .legal-header .doc-type {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #F59E0B;
+      margin-bottom: 8px;
+    }
+    .legal-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .legal-header .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.65);
+    }
+    .legal-header .meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* -- CONTENT CARD -- */
+    .legal-content {
+      background: white;
+      border-radius:8px;
+      padding: 40px;
+      border: 1px solid #dee2e6;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    /* -- TYPOGRAPHY -- */
+    .legal-content h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0B3C5D;
+      margin: 32px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #F59E0B;
+    }
+    .legal-content h2:first-child {
+      margin-top: 0;
+    }
+    .legal-content h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #0B3C5D;
+      margin: 20px 0 8px;
+    }
+    .legal-content p {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #444;
+      margin-bottom: 14px;
+    }
+    .legal-content ul,
+    .legal-content ol {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #444;
+      padding-left: 24px;
+      margin-bottom: 14px;
+    }
+    .legal-content li {
+      margin-bottom: 6px;
+    }
+    .legal-content strong {
+      color: #0B3C5D;
+    }
+    .legal-content a {
+      color: #F59E0B;
+      text-decoration: underline;
+    }
+    .legal-content a:hover {
+      color: #b8962e;
+    }
+
+    /* -- NOTICE BOXES -- */
+    .notice-box,
+    .notice-warning,
+    .notice-info,
+    .notice-important {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .notice-warning {
+      background: #fff5f5;
+      border-left: 4px solid #dc3545;
+      color: #721c24;
+    }
+    .notice-info {
+      background: #f0f7ff;
+      border-left: 4px solid #0d6efd;
+      color: #084298;
+    }
+    .notice-important {
+      background: #fff8e7;
+      border-left: 4px solid #F59E0B;
+      color: #5a4a00;
+    }
+    .notice-box strong,
+    .notice-warning strong,
+    .notice-info strong,
+    .notice-important strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* -- DATA TABLE -- */
+    .legal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 16px 0;
+    }
+    .legal-table th {
+      background: #0B3C5D;
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .legal-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #dee2e6;
+      vertical-align: top;
+      color: #444;
+    }
+    .legal-table tr:nth-child(even) td {
+      background: #f8f9fa;
+    }
+
+    /* -- BACK TO TOP -- */
+    .back-to-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 40px;
+      padding: 12px;
+      background: white;
+      border: 1.5px solid #dee2e6;
+      border-radius: 8px;
+      color: #0B3C5D;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .back-to-top:hover {
+      background: #0B3C5D;
+      color: white;
+      border-color: #0B3C5D;
+    }
+
+    /* -- FOOTER -- */
+    .legal-footer {
+      background: #0B3C5D;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+    }
+    .legal-footer a {
+      color: #F59E0B;
+      text-decoration: none;
+    }
+
+    /* -- MOBILE -- */
+    @media (max-width: 767px) {
+      .legal-wrapper {
+        padding: 20px 16px 60px;
+      }
+      .legal-header {
+        padding: 20px;
+      }
+      .legal-header h1 {
+        font-size: 22px;
+      }
+      .legal-content {
+        padding: 20px 16px;
+      }
+      .legal-content h2 {
+        font-size: 17px;
+      }
+      .legal-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        font-size: 12px;
+      }
+      .legal-table th,
+      .legal-table td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top navigation bar -->
+  <div class="legal-topbar">
+    <a href="/" class="brand">
+      BanaaIQ | بناء IQ
+    </a>
+    <a href="/" class="back-link">
+      <i class="fa fa-arrow-left"></i>
+      Back to website
+    </a>
+  </div>
+
+  <!-- Page content -->
+  {% block content %}{% endblock %}
+
+  <!-- Footer -->
+  <div class="legal-footer">
+    <p>
+      © 2026 BanaaIQ — Shah Muqeem Ullah Quadri |
+      <a href="mailto:iqbaana@gmail.com">
+        iqbaana@gmail.com
+      </a>
+      | Hyderabad, India
+    </p>
+    <p style="margin-top:6px;">
+      <a href="/privacy-policy">Privacy Policy</a>
+      &nbsp;|&nbsp;
+      <a href="/terms-of-service">
+        Terms of Service
+      </a>
+      &nbsp;|&nbsp;
+      <a href="/data-ai-disclosure">
+        Data & AI Disclosure
+      </a>
+    </p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function scrollToTop() {
+      window.scrollTo({top:0, behavior:'smooth'})
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+﻿{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<div class="tutorial-layout">
+    <aside class="tutorial-sidebar">
+        <h6 class="mb-3">Tutorials</h6>
+        <nav class="tutorial-nav">
+            <a class="{{ 'active' if active_tutorial == 'getting-started' else '' }}" href="{{ url_for('tutorials') }}">Getting Started</a>
+            <a class="{{ 'active' if active_tutorial == 'task' else '' }}" href="{{ url_for('tutorials_task') }}">Task Guide</a>
+            <a class="{{ 'active' if active_tutorial == 'dpr' else '' }}" href="{{ url_for('tutorials_dpr') }}">DPR Guide</a>
+            <a class="{{ 'active' if active_tutorial == 'boq' else '' }}" href="{{ url_for('tutorials_boq') }}">BOQ Guide</a>
+            <a class="{{ 'active' if active_tutorial == 'inventory' else '' }}" href="{{ url_for('tutorials_inventory') }}">Inventory Guide</a>
+            <a class="{{ 'active' if active_tutorial == 'translator' else '' }}" href="{{ url_for('tutorials_translator') }}">Translator Guide</a>
+            <a class="{{ 'active' if active_tutorial == 'faq' else '' }}" href="{{ url_for('tutorials_faq') }}">FAQ</a>
+        </nav>
+    </aside>
+    <section class="tutorial-content">
+        {% block tutorial_content %}{% endblock %}
+    </section>
+</div>
+{% endblock %}

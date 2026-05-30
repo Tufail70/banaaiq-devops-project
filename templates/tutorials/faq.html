@@ -1,0 +1,49 @@
+﻿{% extends "tutorials/base_tutorials.html" %}
+{% block title %}Tutorials | FAQ{% endblock %}
+{% block tutorial_content %}
+<div class="content-card p-4">
+    <h3 class="mb-3">Frequently Asked Questions</h3>
+    <div class="accordion" id="faqAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">How do I upload DPR images?</button></h2>
+            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion"><div class="accordion-body">Open the DPR form, select the work zone, then upload photos directly from mobile or desktop. Images are linked to the report date and location so PMs can review evidence without separate folders.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">Can I export BOQs to Excel or PDF?</button></h2>
+            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Yes. BOQs can be exported to Excel for commercial analysis and PDF for client submissions. Exports include item codes, units, quantities, rates, and revision timestamps.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">Does the system support Arabic PDFs?</button></h2>
+            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Yes. BanaaIQ supports bilingual reporting and can render Arabic text in generated PDF outputs, including DPR narratives and executive summaries.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">How does AI forecast inventory needs?</button></h2>
+            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">The model compares planned consumption against actual drawdown, lead time patterns, and upcoming activities. It flags likely shortfalls early so procurement can act before critical tasks are affected.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">Can multiple users work on the same project?</button></h2>
+            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Yes. Teams can collaborate in parallel based on permissions. Site engineers, planners, and commercial staff can update their modules while managers review consolidated dashboards.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">Is my data secure on BanaaIQ?</button></h2>
+            <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Project data is access-controlled per user role, and sensitive operations are restricted by account permissions. Always use strong passwords and approved user access policies for compliance.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq7">How do I switch between Arabic and English?</button></h2>
+            <div id="faq7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Use the language toggle in the top bar. The interface direction, labels, and supported module text switch between Arabic and English instantly.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq8">What does the AI task prioritization do?</button></h2>
+            <div id="faq8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">It ranks tasks using urgency, dependency impact, and schedule risk signals so teams can focus on activities most likely to affect milestones.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq9">Can I use BanaaIQ on mobile?</button></h2>
+            <div id="faq9" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">Yes. Field users can submit updates, photos, and task statuses on mobile browsers, which is useful for site supervision and daily reporting.</div></div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq10">How do I invite a team member to my project?</button></h2>
+            <div id="faq10" class="accordion-collapse collapse" data-bs-parent="#faqAccordion"><div class="accordion-body">From the project administration area, add the user email, assign a role, and choose module access. The invited user can join and start collaborating immediately.</div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

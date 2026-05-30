@@ -1,0 +1,13 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block dashboard_content %}
+<div class="content-card p-4">
+    <h4 class="mb-2">{{ module_title }}</h4>
+    {% if show_demo_data %}
+    <p class="text-muted mb-3">{{ tr("Showing demo/mock module data preview for guest mode.", "عرض بيانات تجريبية للوحدة في وضع الضيف.") }}</p>
+    <button class="btn btn-gold" type="button">{{ tr("Create New", "إنشاء جديد") }}</button>
+    {% else %}
+    <p class="text-muted mb-3">{{ tr("No data yet for", "لا توجد بيانات حتى الآن لـ") }} {{ module_title }}. {{ tr("Add your first item to get started.", "أضف أول عنصر للبدء.") }}</p>
+    <button class="btn btn-gold" type="button">{{ tr("Add First Item", "إضافة أول عنصر") }}</button>
+    {% endif %}
+</div>
+{% endblock %}

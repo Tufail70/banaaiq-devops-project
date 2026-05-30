@@ -1,0 +1,286 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block title %}Billing | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<style>
+.billing-card { border:none; border-radius:8px; box-shadow:0 20px 48px rgba(11,60,93,0.08); }
+.billing-status-badge { border-radius:999px; padding:7px 12px; font-size:12px; font-weight:800; }
+.payment-placeholder { border:1px dashed #F59E0B; border-radius:8px; background:#fffaf0; }
+.invoice-table th { white-space:nowrap; }
+.invoice-empty { border:1px dashed #d9dee7; border-radius:8px; background:#fbfcfe; }
+.payment-soon-modal .modal-header { background:#0B3C5D; color:#ffffff; border:none; }
+.payment-soon-modal .modal-body { padding:2rem; }
+.payment-soon-icon { width:56px; height:56px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:rgba(245,158,11,0.18); color:#F59E0B; font-size:1.4rem; }
+</style>
+
+{% set plan_name = sub.plan.display_name if sub and sub.plan else 'No Plan' %}
+{% if subscription_status == 'trialing' %}
+  {% set status_label = 'Trial Active' %}
+  {% set status_class = 'bg-warning text-dark' %}
+{% elif subscription_status == 'active' %}
+  {% set status_label = 'Active' %}
+  {% set status_class = 'bg-success text-white' %}
+{% elif subscription_status == 'past_due' %}
+  {% set status_label = 'Payment Failed' %}
+  {% set status_class = 'bg-danger text-white' %}
+{% elif subscription_status == 'cancelled' %}
+  {% set status_label = 'Cancelled' %}
+  {% set status_class = 'bg-secondary text-white' %}
+{% else %}
+  {% set status_label = 'Expired' %}
+  {% set status_class = 'bg-danger text-white' %}
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card billing-card">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div>
+            <div class="small text-uppercase text-muted fw-bold mb-2">Current Plan</div>
+            <h3 class="h4 fw-bold mb-2">{{ plan_name }}</h3>
+            {% if sub %}
+            <span class="billing-status-badge {{ status_class }}">{{ status_label }}</span>
+            {% else %}
+            <span class="billing-status-badge bg-light text-dark border">No subscription yet</span>
+            {% endif %}
+          </div>
+          <div class="text-md-end">
+            {% if sub and plan_price is not none %}
+            <div class="small text-uppercase text-muted fw-bold mb-1">Price per cycle</div>
+            <div class="h4 fw-bold mb-0">{{ format_currency_from_sar(plan_price, currency.code, decimals=0) }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if sub %}
+        <div class="row g-3 mt-3">
+          <div class="col-md-4">
+            <div class="small text-muted">Billing cycle</div>
+            <div class="fw-semibold text-capitalize">{{ sub.billing_cycle }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Trial end date</div>
+            <div class="fw-semibold">{{ sub.trial_end.strftime('%d %B %Y') if sub.trial_end else 'N/A' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Next billing date</div>
+            <div class="fw-semibold">{{ next_billing_date.strftime('%d %B %Y') if next_billing_date else 'N/A' }}</div>
+          </div>
+        </div>
+
+        {% if subscription_status == 'trialing' %}
+        <div class="mt-4">
+          <div class="d-flex justify-content-between small text-muted mb-2">
+            <span>{{ subscription_days_left or 0 }} days remaining</span>
+            <span>{{ trial_days_used }}/{{ trial_total_days }} days used</span>
+          </div>
+          <div class="progress" role="progressbar" aria-label="Trial progress" style="height:10px;">
+            <div class="progress-bar bg-warning" style="width: {{ trial_progress }}%;"></div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          {% if subscription_status in ['trialing', 'active'] %}
+          <a href="{{ url_for('pricing') }}" class="btn btn-outline-gold">Change Plan</a>
+          {% endif %}
+          {% if sub and sub.plan and sub.plan.name == 'starter' and subscription_status == 'active' %}
+          <a href="{{ url_for('start_trial', plan_name='professional') }}" class="btn btn-gold">Upgrade to Professional</a>
+          {% endif %}
+          {% if subscription_status in ['trialing', 'active'] %}
+          <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelSubscriptionModal">Cancel Subscription</button>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-muted mt-3 mb-0">Start a trial from the pricing page to unlock BanaaIQ billing, invoices, and AI access.</p>
+        <a href="{{ url_for('pricing') }}" class="btn btn-gold mt-4">View Plans</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card billing-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <div class="small text-uppercase text-muted fw-bold mb-2">Payment Method</div>
+            {% if payment_method %}
+            <h3 class="h5 fw-bold mb-1">Default Card</h3>
+            <p class="text-muted mb-0">Shown here as a placeholder for the upcoming billing flow.</p>
+            {% else %}
+            <h3 class="h5 fw-bold mb-1">No payment method on file</h3>
+            <p class="text-muted mb-0">Payment activation will appear here before launch.</p>
+            {% endif %}
+          </div>
+          {% if payment_method %}
+          <!-- STRIPE TODO: Replace button with Stripe Elements card update form before launch -->
+          <button type="button" class="btn btn-outline-gold btn-sm" data-bs-toggle="modal" data-bs-target="#paymentComingSoonModal">Update Payment Method</button>
+          {% else %}
+          <!-- STRIPE TODO: Add Stripe Elements card form here -->
+          <button type="button" class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#paymentComingSoonModal">Add Payment Method</button>
+          {% endif %}
+        </div>
+
+        {% if payment_method %}
+        <div class="border rounded-4 p-3 mb-4">
+          <div class="d-flex align-items-center gap-3">
+            <i class="{% if (payment_method.card_brand or '')|lower == 'visa' %}fa-brands fa-cc-visa{% else %}fa-solid fa-credit-card{% endif %}" style="font-size:2rem;color:#0B3C5D;"></i>
+            <div>
+              <div class="fw-semibold">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; {{ payment_method.card_last_four }}</div>
+              <div class="text-muted small">Exp {{ "%02d"|format(payment_method.expiry_month or 0) }}/{{ payment_method.expiry_year or 0 }}</div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="invoice-empty p-3 mb-4">No payment method on file</div>
+        {% endif %}
+
+        <div id="demo-card-form" class="payment-placeholder p-4">
+          <div class="alert alert-warning border-0 mb-3" style="background:#fff3cd;color:#6c4f00;">&#128179; Payment activation is coming soon for your region</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small text-muted">Card number</label>
+              <input type="text" class="form-control" placeholder="•••• •••• •••• ••••" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted">Expiry</label>
+              <input type="text" class="form-control" placeholder="MM / YY" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted">CVV</label>
+              <input type="text" class="form-control" placeholder="CVV" disabled>
+            </div>
+          </div>
+          <button type="button" class="btn btn-gold mt-3" data-bs-toggle="modal" data-bs-target="#paymentComingSoonModal">Save Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card billing-card h-100">
+      <div class="card-body p-4">
+        <div class="small text-uppercase text-muted fw-bold mb-2">Invoice History</div>
+        <h3 class="h5 fw-bold mb-3">Tax Invoices</h3>
+        {% if invoices %}
+        <div class="table-responsive">
+          <table class="table align-middle invoice-table mb-0">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Period</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>VAT</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for invoice in invoices %}
+              <tr>
+                <td>{{ invoice.invoice_number }}</td>
+                <td>{{ invoice.period_start.strftime('%d %b %Y') if invoice.period_start else '-' }} - {{ invoice.period_end.strftime('%d %b %Y') if invoice.period_end else '-' }}</td>
+                <td>{{ invoice.subscription.plan.display_name if invoice.subscription and invoice.subscription.plan else plan_name }}</td>
+                <td>{{ format_currency_from_sar(invoice.amount, currency.code) }}</td>
+                <td>{{ format_currency_from_sar(invoice.vat_amount, currency.code) }}</td>
+                <td>{{ format_currency_from_sar(invoice.total_amount, currency.code) }}</td>
+                <td>
+                  {% if invoice.status == 'paid' %}
+                  <span class="badge bg-success">Paid</span>
+                  {% elif invoice.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                  {% elif invoice.status == 'retry' %}
+                  <span class="badge bg-info text-dark">Retry</span>
+                  {% else %}
+                  <span class="badge bg-danger">Failed</span>
+                  {% endif %}
+                </td>
+                <td><a href="{{ url_for('billing_invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-sm btn-outline-gold">Download</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="invoice-empty p-4 text-muted">No invoices yet. Your first invoice will appear when your trial converts.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if sub and subscription_status in ['trialing', 'active'] %}
+  <div class="col-12">
+    <div class="card billing-card">
+      <div class="card-body p-4">
+        <div class="small text-uppercase text-muted fw-bold mb-2">Cancel Subscription</div>
+        <h3 class="h5 fw-bold mb-2">Need to pause BanaaIQ?</h3>
+        <p class="text-muted mb-3">You can cancel now and still keep access until {{ (sub.current_period_end or sub.trial_end).strftime('%d %B %Y') if (sub.current_period_end or sub.trial_end) else 'the end of your period' }}.</p>
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelSubscriptionModal">Cancel Subscription</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="modal fade payment-soon-modal" id="paymentComingSoonModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:8px;">
+      <div class="modal-header">
+        <h5 class="modal-title">Payment Coming Soon</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="payment-soon-icon mx-auto mb-3">
+          <i class="fa-solid fa-credit-card"></i>
+        </div>
+        <p class="mb-0 text-muted">Payment coming soon. You will be notified when payments are activated for your region.</p>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 justify-content-center">
+        <button type="button" class="btn btn-gold" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if sub and subscription_status in ['trialing', 'active'] %}
+<div class="modal fade" id="cancelSubscriptionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:8px;">
+      <form method="post" action="{{ url_for('billing_cancel') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header" style="background:#0B3C5D;color:#ffffff;border:none;">
+          <h5 class="modal-title">We're sorry to see you go</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted">Your access continues until {{ (sub.current_period_end or sub.trial_end).strftime('%d %B %Y') if (sub.current_period_end or sub.trial_end) else 'the end of your current period' }}. After that, your data will be kept safely for 90 days.</p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cancellation reason</label>
+            <select class="form-select" name="reason" required>
+              <option value="">Select a reason...</option>
+              <option>Too expensive</option>
+              <option>Project has ended</option>
+              <option>Missing features I need</option>
+              <option>Switching to another platform</option>
+              <option>Technical issues</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label fw-semibold">Anything else you'd like to tell us?</label>
+            <textarea class="form-control" name="feedback" rows="4" placeholder="Optional feedback"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep My Subscription</button>
+          <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Contact | BanaaIQ{% endblock %}
+{% block content %}
+<section class="inner-hero py-5">
+    <div class="container py-4">
+        <h1 class="fw-bold">{{ 'تواصل معنا' if is_arabic else 'Get In Touch' }}</h1>
+        <p class="lead">{{ 'شاركنا احتياجات مشروعك وسنرتب لك عرضاً مناسباً.' if is_arabic else 'Share your project needs and we will arrange a tailored walkthrough.' }}</p>
+    </div>
+</section>
+
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="content-card p-4">
+                    <form id="contact-form" method="POST" action="/contact/submit">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div
+                            id="contact-success"
+                            class="alert"
+                            style="display:none; background:#d4edda; border:1px solid #c3e6cb; color:#155724; border-radius:8px; padding:12px 16px; margin-bottom:16px;"
+                        >
+                            Message sent! We will reply within 24 hours.
+                        </div>
+
+                        <div
+                            id="contact-error"
+                            class="alert"
+                            style="display:none; background:#f8d7da; border:1px solid #f5c6cb; color:#721c24; border-radius:8px; padding:12px 16px; margin-bottom:16px;"
+                        >
+                            Could not send message. Please email us directly at
+                            <a href="mailto:iqbaana@gmail.com" style="color:#721c24;">iqbaana@gmail.com</a>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Full Name *</label>
+                            <input
+                                type="text"
+                                name="name"
+                                class="form-control"
+                                placeholder="Ahmed Al-Otaibi"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email Address *</label>
+                            <input
+                                type="email"
+                                name="email"
+                                class="form-control"
+                                placeholder="ahmed@company.com"
+                                required
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Company</label>
+                            <input
+                                type="text"
+                                name="company"
+                                class="form-control"
+                                placeholder="Al Noor Construction"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Subject</label>
+                            <input
+                                type="text"
+                                name="subject"
+                                class="form-control"
+                                placeholder="Enquiry about BanaaIQ"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Message *</label>
+                            <textarea
+                                name="message"
+                                class="form-control"
+                                rows="5"
+                                placeholder="Tell us how we can help..."
+                                required
+                            ></textarea>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="submit-btn"
+                            class="btn btn-lg w-100"
+                            style="background:#F59E0B; color:white; border:none; border-radius:8px; font-weight:700; padding:12px;"
+                        >
+                            <i class="fa fa-paper-plane me-2"></i>
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="content-card p-4 mb-4">
+                    <h5>{{ 'معلومات التواصل' if is_arabic else 'Contact Information' }}</h5>
+                    <p class="mb-1"><i class="fa-solid fa-envelope"></i> iqbaana@gmail.com</p>
+                    <p class="mb-0"><i class="fa-solid fa-phone"></i> +966 50 000 0000</p>
+                </div>
+                <div class="content-card p-4 mb-4">
+                    <h5>Calendly</h5>
+                    <p>{{ 'احجز جلسة تعريفية مع فريقنا.' if is_arabic else 'Book a discovery session with our team.' }}</p>
+                    <a target="_blank" rel="noopener" href="https://calendly.com/placeholder" class="btn btn-outline-gold">{{ 'احجز عرضاً مباشراً' if is_arabic else 'Schedule a Live Demo' }}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-5">
+    <div class="container">
+        <div class="content-card p-4">
+            <h3>{{ 'لماذا الشراكة أو الاستحواذ؟' if is_arabic else 'Why Partner or Acquire?' }}</h3>
+            <ul class="list-unstyled mt-3 mb-0 partner-list">
+                <li><i class="fa-solid fa-bolt"></i> {{ 'ملاءمة مثبتة بين المنتج واحتياجات سوق البناء السعودي.' if is_arabic else 'Proven product-market fit in Saudi construction workflows.' }}</li>
+                <li><i class="fa-solid fa-language"></i> {{ 'نموذج تشغيل عربي-إنجليزي أصيل لفرق الميدان والإدارة.' if is_arabic else 'Native Arabic-English delivery model for field and management teams.' }}</li>
+                <li><i class="fa-solid fa-robot"></i> {{ 'خارطة طريق مدعومة بالذكاء الاصطناعي مع وحدات عملية جاهزة.' if is_arabic else 'AI-enabled roadmap with practical modules already in production.' }}</li>
+                <li><i class="fa-solid fa-chart-line"></i> {{ 'إمكانات توسع قوية عبر برامج البنية التحتية في الخليج.' if is_arabic else 'Strong expansion potential across GCC infrastructure programs.' }}</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+{% if request.args.get('sent') == 'true' or request.args.get('error') == 'missing' %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if ({{ 'true' if request.args.get('sent') == 'true' else 'false' }}) {
+    document.getElementById('contact-success').style.display = 'block'
+  }
+  if ({{ 'true' if request.args.get('error') == 'missing' else 'false' }}) {
+    document.getElementById('contact-error').textContent = ''
+    document.getElementById('contact-error').innerHTML = 'Name, email, and message are required. If the form still fails, email us directly at <a href="mailto:iqbaana@gmail.com" style="color:#721c24;">iqbaana@gmail.com</a>.'
+    document.getElementById('contact-error').style.display = 'block'
+  }
+})
+</script>
+{% endif %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/reveal.js') }}"></script>
+{% endblock %}

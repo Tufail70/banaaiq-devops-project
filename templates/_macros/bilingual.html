@@ -1,0 +1,12 @@
+{% macro page_title(en, ar=None, sub=None) %}
+<header class="bq-page-head">
+  <div>
+    <h1 class="bq-page-head__title">
+      <span class="en bq-serif">{{ en }}</span>
+      {% if ar %}<span class="ar" lang="ar" dir="rtl">{{ ar }}</span>{% endif %}
+    </h1>
+    {% if sub %}<p class="bq-page-head__sub">{{ sub }}</p>{% endif %}
+  </div>
+  <div class="bq-page-head__actions">{{ caller() if caller else '' }}</div>
+</header>
+{% endmacro %}

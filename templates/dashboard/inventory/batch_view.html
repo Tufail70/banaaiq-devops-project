@@ -1,0 +1,286 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Inventory Batch #{{ batch_id[:8] | upper }} | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  {# Breadcrumb + actions #}
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left"></i></a>
+      <div>
+        <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+          <i class="fas fa-layer-group me-2" style="color:#F59E0B;"></i>
+          Batch #{{ batch_id[:8] | upper }}
+          {% if parent_batch_id %}
+          <a href="{{ url_for('inventory_batch_view', batch_id=parent_batch_id) }}"
+             class="badge bg-info text-dark fw-normal ms-2 text-decoration-none" style="font-size:12px;">
+            <i class="fas fa-code-branch me-1"></i>Revised from {{ parent_batch_id[:8] | upper }}
+          </a>
+          {% endif %}
+        </h4>
+        <small class="text-muted">
+          {% if project %}<i class="fas fa-folder me-1"></i>{{ project.name }}{% endif %}
+          &nbsp;&mdash;&nbsp;{{ total_items }} items &nbsp;&mdash;&nbsp; SAR {{ '{:,.0f}'.format(total_sar) }}
+        </small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('inventory_batch_edit', batch_id=batch_id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-pen me-1"></i> Edit
+      </a>
+      <a href="{{ url_for('inventory_batch_download_excel', batch_id=batch_id) }}" class="btn btn-sm btn-outline-success">
+        <i class="fas fa-file-excel me-1"></i> Excel
+      </a>
+      <a href="{{ url_for('inventory_batch_download_pdf', batch_id=batch_id) }}" class="btn btn-sm btn-outline-danger">
+        <i class="fas fa-file-pdf me-1"></i> PDF
+      </a>
+      <a href="{{ url_for('inventory_batch_distribute', batch_id=batch_id) }}" class="btn btn-sm btn-gold">
+        <i class="fas fa-share-nodes me-1"></i> Distribute
+      </a>
+      <form method="POST" action="{{ url_for('inventory_batch_delete', batch_id=batch_id) }}"
+            onsubmit="return confirm('Delete this entire inventory batch? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+          <i class="fas fa-trash me-1"></i> Delete Batch
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {# Summary Cards #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fw-bold fs-3" style="color:#0B3C5D;">{{ total_items }}</div>
+        <div class="text-muted small">Total Items</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fw-bold fs-5" style="color:#F59E0B;">SAR {{ '{:,.0f}'.format(total_sar) }}</div>
+        <div class="text-muted small">Total Value</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fw-bold fs-3" style="color:#0B3C5D;">{{ categories | length }}</div>
+        <div class="text-muted small">Categories</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fw-bold fs-5" style="color:#0B3C5D;">{{ project.name[:18] if project else 'N/A' }}</div>
+        <div class="text-muted small">Project</div>
+      </div>
+    </div>
+  </div>
+
+  {# Category accordion #}
+  <div class="accordion inventory-category-accordion" id="categoryAccordion">
+    {% for cat in categories %}
+    <div class="accordion-item border-0 shadow-sm mb-3 rounded">
+      <h2 class="accordion-header">
+        <button class="accordion-button fw-semibold rounded" type="button"
+                data-bs-toggle="collapse" data-bs-target="#cat_{{ loop.index }}"
+                style="background:#fff;color:#0B3C5D;">
+          <i class="fas fa-tag me-2" style="color:#F59E0B;"></i>
+          {{ cat.category }}
+          {% if cat.category_ar %}
+            <small class="ms-2 text-muted" dir="rtl">{{ cat.category_ar }}</small>
+          {% endif %}
+          <span class="badge bg-light text-dark ms-2 fw-normal">{{ cat['items'] | length }} items</span>
+          <span class="ms-auto me-3 text-muted small fw-normal">SAR {{ '{:,.0f}'.format(cat.total_sar) }}</span>
+        </button>
+      </h2>
+      <div id="cat_{{ loop.index }}" class="accordion-collapse collapse show" data-bs-parent="#categoryAccordion">
+        <div class="accordion-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 small">
+              <thead style="background:#f8f9fa;">
+                <tr>
+                  <th class="ps-3">#</th>
+                  <th>Item Name</th>
+                  <th>Arabic</th>
+                  <th>Unit</th>
+                  <th>Stock</th>
+                  <th>Threshold</th>
+                  <th>Unit SAR</th>
+                  <th>Total SAR</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in cat['items'] %}
+                <tr>
+                  <td class="ps-3 text-muted">{{ loop.index }}</td>
+                  <td class="fw-semibold">{{ item.name }}</td>
+                  <td dir="rtl" class="text-muted">{{ item.name_ar or '—' }}</td>
+                  <td>{{ item.unit or '—' }}</td>
+                  <td class="fw-semibold">{{ '{:,.1f}'.format(item.stock | float) }}</td>
+                  <td class="text-muted">{{ '{:,.1f}'.format(item.threshold | float) }}</td>
+                  <td>{{ '{:,.0f}'.format(item.value_sar | float) }}</td>
+                  <td class="fw-semibold" style="color:#F59E0B;">{{ '{:,.0f}'.format((item.value_sar | float) * (item.stock | float)) }}</td>
+                  <td>
+                    {% set st = item.status %}
+                    {% if st == 'critical' %}
+                      <span class="badge bg-danger">Critical</span>
+                    {% elif st == 'low' %}
+                      <span class="badge bg-warning text-dark">Low</span>
+                    {% else %}
+                      <span class="badge bg-success">OK</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.specification or item.brand_suggestions_json or item.safety_notes %}
+                    <button class="btn btn-xs btn-outline-secondary py-0 px-2"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#detail_{{ item.id }}"
+                            style="font-size:11px;">
+                      <i class="fas fa-chevron-down"></i> Details
+                    </button>
+                    {% endif %}
+                  </td>
+                </tr>
+                {# Expandable detail row #}
+                {% if item.specification or item.brand_suggestions_json or item.safety_notes or item.storage_requirements or item.alternative_items_json %}
+                <tr class="collapse" id="detail_{{ item.id }}">
+                  <td colspan="10" class="p-0">
+                    <div class="bg-light border-top px-4 py-3">
+                      <div class="row g-3">
+
+                        {% if item.specification %}
+                        <div class="col-md-6">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-microscope me-1" style="color:#F59E0B;"></i>Specification
+                          </div>
+                          <div class="small text-dark">{{ item.specification }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.brand_suggestions_json %}
+                        {% set brands = item.brand_suggestions_json | from_json %}
+                        {% if brands %}
+                        <div class="col-md-6">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-tags me-1" style="color:#F59E0B;"></i>Brand Suggestions
+                          </div>
+                          <div class="d-flex flex-wrap gap-1">
+                            {% for b in brands %}
+                            <span class="badge bg-light text-dark border" style="font-size:11px;">{{ b }}</span>
+                            {% endfor %}
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if item.supplier %}
+                        <div class="col-md-4">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-building me-1" style="color:#F59E0B;"></i>Supplier
+                          </div>
+                          <div class="small">{{ item.supplier }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.reorder_lead_time_days or item.min_order_qty %}
+                        <div class="col-md-4">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-clock me-1" style="color:#F59E0B;"></i>Procurement
+                          </div>
+                          <div class="small">
+                            {% if item.reorder_lead_time_days %}
+                              Lead time: <strong>{{ item.reorder_lead_time_days }} days</strong><br>
+                            {% endif %}
+                            {% if item.min_order_qty %}
+                              Min order: <strong>{{ '{:,.0f}'.format(item.min_order_qty | float) }} {{ item.min_order_unit or '' }}</strong>
+                            {% endif %}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.storage_requirements %}
+                        <div class="col-md-4">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-warehouse me-1" style="color:#F59E0B;"></i>Storage
+                          </div>
+                          <div class="small text-muted">{{ item.storage_requirements }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.safety_notes %}
+                        <div class="col-12">
+                          <div class="alert alert-warning py-2 px-3 mb-0 small">
+                            <i class="fas fa-hard-hat me-1"></i>
+                            <strong>Safety:</strong> {{ item.safety_notes }}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                        {% if item.alternative_items_json %}
+                        {% set alts = item.alternative_items_json | from_json %}
+                        {% if alts %}
+                        <div class="col-md-6">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-exchange-alt me-1" style="color:#F59E0B;"></i>Alternatives
+                          </div>
+                          {% for alt in alts %}
+                          <div class="small mb-1">
+                            <span class="fw-semibold">{{ alt.name }}</span>
+                            {% if alt.note %}<span class="text-muted"> — {{ alt.note }}</span>{% endif %}
+                          </div>
+                          {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if item.shelf_life_days %}
+                        <div class="col-md-6">
+                          <div class="fw-semibold small mb-1" style="color:#0B3C5D;">
+                            <i class="fas fa-hourglass-half me-1" style="color:#F59E0B;"></i>Shelf Life
+                          </div>
+                          <div class="small">
+                            <strong>{{ item.shelf_life_days }} days</strong>
+                            {% if item.shelf_life_note %}<br><span class="text-muted">{{ item.shelf_life_note }}</span>{% endif %}
+                          </div>
+                        </div>
+                        {% endif %}
+
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+              <tfoot style="background:#f8f9fa;">
+                <tr>
+                  <td colspan="7" class="ps-3 fw-bold">Category Total</td>
+                  <td class="fw-bold" style="color:#F59E0B;">SAR {{ '{:,.0f}'.format(cat.total_sar) }}</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<style>
+.btn-gold { background:#F59E0B; border-color:#F59E0B; color:#fff; }
+.btn-gold:hover { background:#b8973b; border-color:#b8973b; color:#fff; }
+.btn-xs { font-size:11px; padding:2px 6px; }
+</style>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}{{ task.name }} | Tasks | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width:860px;">
+
+  {# ── Breadcrumb ── #}
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <a href="{{ url_for('dashboard_tasks') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Tasks
+    </a>
+    <h4 class="fw-bold mb-0 flex-fill" style="color:var(--bq-bone,#f4f0e6);">{{ task.name }}</h4>
+    {% if role == 'project_manager' %}
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('task_edit', task_id=task.id) }}" class="btn btn-sm btn-outline-gold">
+        <i class="fas fa-pen me-1"></i> Edit
+      </a>
+      <form method="POST" action="{{ url_for('task_delete', task_id=task.id) }}"
+            onsubmit="return confirm('Delete this task? This cannot be undone.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-danger">
+          <i class="fas fa-trash me-1"></i> Delete
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="row g-4">
+
+    {# ── LEFT: Task details ── #}
+    <div class="col-lg-8">
+      <div class="content-card p-4 mb-4">
+
+        {# Status pill — inline AJAX update #}
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+          <div>
+            <span class="task-section-label">STATUS / الحالة</span><br>
+            <div class="d-flex gap-1 mt-1 flex-wrap" id="status-btns">
+              {% for key, label in task_status_labels.items() %}
+              {% set active = (task.status == key) %}
+              <button class="btn btn-sm {{ 'btn-gold' if active else 'btn-outline-secondary' }} status-btn"
+                      data-status="{{ key }}"
+                      onclick="updateStatus('{{ key }}', this)"
+                      {{ 'disabled' if not active and role != 'project_manager' and task.assigned_to_id != current_user.id else '' }}>
+                {{ label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="ms-auto">
+            {% set pc = {'urgent':'danger','high':'warning','normal':'secondary','low':'light'} %}
+            {% set tc = {'urgent':'','high':'text-dark','normal':'','low':'text-muted'} %}
+            <span class="badge bg-{{ pc.get(task.priority,'secondary') }} {{ tc.get(task.priority,'') }}">
+              {{ task.priority|title }}
+            </span>
+          </div>
+        </div>
+
+        {# Meta grid #}
+        <div class="task-meta-grid mb-3">
+          <div class="task-meta-cell">
+            <span class="task-section-label">Project / المشروع</span>
+            <strong>{{ task.project_rel.name if task.project_rel else '—' }}</strong>
+          </div>
+          <div class="task-meta-cell">
+            <span class="task-section-label">Assigned To / مسند إليه</span>
+            <strong>{{ task.assigned_to.full_name if task.assigned_to else '—' }}</strong>
+            {% if task.assigned_to and task.assigned_to.job_title %}
+              <span style="color:rgba(244,240,230,0.45);font-size:0.8em">({{ task.assigned_to.job_title }})</span>
+            {% endif %}
+          </div>
+          <div class="task-meta-cell">
+            <span class="task-section-label">Created By / أنشأ بواسطة</span>
+            <strong>{{ task.created_by.full_name if task.created_by else '—' }}</strong>
+          </div>
+          <div class="task-meta-cell">
+            <span class="task-section-label">Due Date / الاستحقاق</span>
+            {% if task.due_date %}
+              <strong class="{{ 'text-danger' if task.is_overdue else '' }}">
+                {{ task.due_date.strftime('%d %b %Y') }}
+                {% if task.is_overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+              </strong>
+            {% else %}
+              <span style="color:rgba(244,240,230,0.4)">—</span>
+            {% endif %}
+          </div>
+          {% if task.completed_at %}
+          <div class="task-meta-cell">
+            <span class="task-section-label">Completed / اكتمل</span>
+            <strong style="color:var(--bq-success,#4ade80)">{{ task.completed_at.strftime('%d %b %Y %H:%M') }}</strong>
+          </div>
+          {% endif %}
+          {% if task.depends_on %}
+          <div class="task-meta-cell">
+            <span class="task-section-label">Depends On / يعتمد على</span>
+            <a href="{{ url_for('task_detail', task_id=task.depends_on.id) }}" style="color:var(--bq-gold,#c8a730);font-weight:600;">
+              {{ task.depends_on.name }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if task.description %}
+        <div class="mb-3">
+          <p class="task-section-label mb-1">DESCRIPTION / الوصف</p>
+          <p class="mb-0" style="white-space:pre-wrap;color:rgba(244,240,230,0.8);">{{ task.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if task.remarks %}
+        <div class="task-remarks mb-0">
+          <p class="task-section-label mb-1">REMARKS / ملاحظات</p>
+          <p class="mb-0 small" style="white-space:pre-wrap;color:rgba(244,240,230,0.75);">{{ task.remarks }}</p>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    {# ── RIGHT: Activity feed ── #}
+    <div class="col-lg-4">
+      <div class="content-card p-3">
+        <p class="task-section-label mb-3" style="font-size:0.8rem;">
+          <i class="fas fa-history me-1" style="color:var(--bq-gold,#c8a730);"></i>
+          Activity / السجل
+        </p>
+        {% if activities %}
+        <div class="task-activity-feed">
+          {% for act in activities %}
+          <div class="task-activity-item">
+            <div class="task-activity-avatar">
+              <i class="fas fa-user" aria-hidden="true"></i>
+            </div>
+            <div class="task-activity-body">
+              <div class="task-activity-line">
+                <strong>{{ act.actor.full_name if act.actor else 'System' }}</strong>
+                <span class="task-activity-action">{{ act.action.replace('_',' ') }}</span>
+              </div>
+              {% if act.details %}
+              <div class="task-activity-detail">{{ act.details }}</div>
+              {% endif %}
+              <div class="task-activity-time">{{ act.created_at.strftime('%d %b %Y %H:%M') if act.created_at else '' }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-center py-3 mb-0" style="color:rgba(244,240,230,0.35);font-size:0.85rem;">No activity yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function updateStatus(newStatus, btn) {
+  var form = new FormData();
+  form.append('csrf_token', '{{ csrf_token() }}');
+  form.append('status', newStatus);
+  fetch('{{ url_for("task_update_status", task_id=task.id) }}', {
+    method: 'POST', body: form
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      document.querySelectorAll('.status-btn').forEach(b => {
+        b.classList.toggle('btn-gold', b.dataset.status === newStatus);
+        b.classList.toggle('btn-outline-secondary', b.dataset.status !== newStatus);
+      });
+    } else {
+      alert('Failed to update status: ' + (data.error || 'unknown'));
+    }
+  })
+  .catch(() => alert('Network error updating status.'));
+}
+</script>
+{% endblock %}

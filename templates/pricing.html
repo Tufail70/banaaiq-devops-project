@@ -1,0 +1,834 @@
+{% extends "base.html" %}
+{% block title %}Pricing | BanaaIQ{% endblock %}
+{% block content %}
+{% set comparison_rows = [
+  {'label': 'Daily Progress Reports', 'arabic': 'تقارير التقدم اليومي', 'feature': 'DPR'},
+  {'label': 'Bill of Quantities', 'arabic': 'جدول الكميات', 'feature': 'BOQ'},
+  {'label': 'Inventory Tracking', 'arabic': 'متابعة المخزون', 'feature': 'Inventory'},
+  {'label': 'Task Management', 'arabic': 'إدارة المهام', 'feature': 'Tasks'},
+  {'label': 'AI Translator', 'arabic': 'المترجم الذكي', 'feature': 'Translator'},
+  {'label': 'Priority Support', 'arabic': 'دعم أولوية', 'feature': 'Priority Support'},
+  {'label': 'Dedicated Onboarding', 'arabic': 'تهيئة مخصصة', 'feature': 'Dedicated Onboarding'},
+  {'label': 'Custom Integrations', 'arabic': 'تكاملات مخصصة', 'feature': 'Custom Integrations'},
+  {'label': 'Service Level Agreement', 'arabic': 'اتفاقية مستوى الخدمة', 'feature': 'SLA'}
+] %}
+{% set plan_copy = {
+  'starter': {
+    'arabic': 'البداية',
+    'tag': 'Focused teams and first digital rollout',
+    'summary': 'A clean starting point for teams replacing paper, chat threads, and spreadsheet chasing.',
+    'quote': 'Most Indian construction firms start with Starter.',
+    'region': '🇮🇳 Recommended early-stage rollout'
+  },
+  'professional': {
+    'arabic': 'الاحترافي',
+    'tag': 'Daily coordination at site speed',
+    'summary': 'The balanced plan for active projects managing reporting, materials, translation, and AI workflows together.',
+    'quote': 'Most Saudi site teams start with Professional.',
+    'region': '🇸🇦 Recommended for site control'
+  },
+  'enterprise': {
+    'arabic': 'المؤسسات',
+    'tag': 'Program-wide visibility and governance',
+    'summary': 'Designed for organizations standardizing process across multiple projects, leadership layers, and delivery teams.',
+    'quote': 'Best when rollout, governance, and support need a tailored structure.',
+    'region': '🌍 Best for scaled adoption'
+  }
+} %}
+{% set faq_items = [
+  {
+    'question': 'Is there a free trial before billing starts?',
+    'answer': 'Yes. BanaaIQ is currently free during beta and no credit card is required to begin your trial.'
+  },
+  {
+    'question': 'Can I switch between monthly and annual billing later?',
+    'answer': 'Yes. You can switch billing cycles later from the billing workflow once payments are fully activated.'
+  },
+  {
+    'question': 'What happens if I need to cancel?',
+    'answer': 'You can cancel from your billing area. Your data remains safe and available during the retention window.'
+  },
+  {
+    'question': 'Why do prices change currency on this page?',
+    'answer': 'BanaaIQ uses your detected session region to default to SAR, INR, or USD, and you can switch anytime from the currency pills above.'
+  },
+  {
+    'question': 'Is project data secure?',
+    'answer': 'Yes. The platform is built for professional construction workflows with controlled access, exportable records, and clear audit visibility.'
+  }
+] %}
+<style>
+html {
+  scroll-behavior: smooth;
+}
+.pricing-shell {
+  background:
+    radial-gradient(circle at top left, rgba(245,158,11,0.12), transparent 20%),
+    radial-gradient(circle at top right, rgba(13,27,62,0.12), transparent 26%),
+    linear-gradient(180deg, #f5f8fc 0%, #ffffff 38%, #f8fbfd 100%);
+  color: #10213f;
+}
+.pricing-page-section {
+  padding: 84px 0;
+}
+.pricing-shell .container {
+  position: relative;
+  z-index: 1;
+}
+.pricing-gradient-text {
+  color: #f0d690;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .pricing-gradient-text {
+    background: linear-gradient(90deg, #ffffff 0%, #f0d690 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+.pricing-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(245,158,11,0.14);
+  color: #8f6f1b;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pricing-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 78px 0 36px;
+}
+.pricing-hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius:8px;
+  padding: clamp(28px, 4vw, 44px);
+  background:
+    radial-gradient(circle at top right, rgba(245,158,11,0.18), transparent 22%),
+    linear-gradient(135deg, #07122a 0%, #0d1b3e 55%, #15325f 100%);
+  color: #ffffff;
+  box-shadow: 0 30px 80px rgba(13,27,62,0.20);
+}
+.pricing-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.34;
+  pointer-events: none;
+}
+.pricing-hero-copy,
+.pricing-hero-side {
+  position: relative;
+  z-index: 1;
+}
+.pricing-hero-title {
+  margin: 18px 0 16px;
+  font-size: clamp(2.4rem, 4.8vw, 4.35rem);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  color: #ffffff;
+}
+.pricing-hero-lead {
+  margin: 0 0 26px;
+  max-width: 650px;
+  color: rgba(255,255,255,0.80);
+  line-height: 1.9;
+  font-size: 1.05rem;
+}
+.pricing-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.currency-pill-group,
+.billing-pill-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pill-button {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: transparent;
+  color: rgba(255,255,255,0.50);
+  font-weight: 500;
+  font-size: 0.88rem;
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+.pill-button.active {
+  background: rgba(232,197,71,0.20);
+  color: #e8c547;
+  font-weight: 600;
+}
+.pricing-note {
+  color: rgba(255,255,255,0.68);
+  font-size: 0.94rem;
+}
+.pricing-side-card {
+  border-radius:8px;
+  padding: 22px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 20px 44px rgba(0,0,0,0.12);
+}
+.pricing-side-card h3 {
+  margin-bottom: 14px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+.pricing-side-card p,
+.pricing-side-card li {
+  color: rgba(255,255,255,0.76);
+  line-height: 1.8;
+}
+.pricing-side-card ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+.pricing-grid {
+  padding-bottom: 14px;
+}
+.plan-card {
+  position: relative;
+  height: 100%;
+  padding: 28px;
+  border-radius:8px;
+  border: 1px solid #dce5ef;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.98)),
+    #ffffff;
+  box-shadow: 0 22px 46px rgba(13,27,62,0.08);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+.plan-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(245,158,11,0.40), rgba(13,27,62,0.92));
+}
+.plan-card:hover {
+  transform: translateY(-7px);
+  border-color: rgba(245,158,11,0.42);
+  box-shadow: 0 28px 56px rgba(13,27,62,0.12);
+}
+.plan-card.popular {
+  border-color: rgba(13,27,62,0.88);
+  box-shadow: 0 32px 64px rgba(13,27,62,0.16);
+}
+.plan-card.popular::before {
+  height: 5px;
+  background: linear-gradient(90deg, #F59E0B, #0d1b3e 80%);
+}
+.plan-badge {
+  /* Inset full-width ribbon at top of popular card */
+  display: block;
+  margin: -28px -28px 20px;
+  padding: 9px 28px;
+  text-align: center;
+  background: #e8c547;
+  color: #0a0a0a;
+  font-size: 0.70rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 7px 7px 0 0;
+}
+/* Hide the gradient bar behind popular ribbon */
+.plan-card.popular::before { display: none; }
+.plan-tag {
+  color: #8f6f1b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.plan-title {
+  margin: 10px 0 6px;
+  font-size: 1.65rem;
+  font-weight: 800;
+}
+.plan-arabic {
+  display: block;
+  margin-bottom: 12px;
+  color: #b07f10;
+  font-size: 1rem;
+  font-family: 'Cairo', sans-serif;
+}
+.plan-summary {
+  margin: 0 0 18px;
+  color: #64748b;
+  line-height: 1.8;
+}
+.price-box {
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius:8px;
+  background: linear-gradient(180deg, #f8fafc, #ffffff);
+  border: 1px solid #e5ecf4;
+}
+.price-label {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.price-stack {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 10px 0 8px;
+}
+.price-currency {
+  padding-bottom: 12px;
+  color: #8f6f1b;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.price-value {
+  font-size: clamp(2.5rem, 5vw, 3.4rem);
+  line-height: 1;
+  font-weight: 800;
+  color: #e8c547;
+  letter-spacing: -0.05em;
+}
+.price-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.price-cycle {
+  color: #64748b;
+}
+.save-pill {
+  display: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(25,135,84,0.12);
+  color: #157347;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.region-note {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius:8px;
+  background: rgba(245,158,11,0.10);
+  color: #5f6470;
+  font-size: 0.93rem;
+  line-height: 1.7;
+}
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+.feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed #e9edf4;
+  color: #334155;
+}
+.feature-list li:last-child {
+  border-bottom: none;
+}
+.feature-check {
+  color: #198754;
+  margin-top: 3px;
+}
+.feature-muted {
+  color: #cbd5e1;
+  margin-top: 3px;
+}
+.plan-quote {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-left: 3px solid #F59E0B;
+  border-radius: 0 16px 16px 0;
+  background: rgba(245,158,11,0.08);
+  color: #4b5563;
+  line-height: 1.75;
+}
+.comparison-wrap {
+  border-radius:8px;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid #e0e7f1;
+  box-shadow: 0 20px 42px rgba(13,27,62,0.08);
+  overflow: hidden;
+}
+.comparison-head {
+  padding: 26px 28px 12px;
+}
+.comparison-head h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+}
+.comparison-head p {
+  margin: 0;
+  color: #64748b;
+}
+.comparison-table {
+  margin-bottom: 0;
+}
+.comparison-table thead th {
+  background: #0d1b3e;
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.08);
+  font-weight: 700;
+}
+.comparison-table tbody td {
+  vertical-align: middle;
+  border-color: #edf2f7;
+  color: #475569;
+}
+.comparison-table .feature-name {
+  font-weight: 700;
+  color: #10213f;
+}
+.comparison-table .feature-name small {
+  display: block;
+  margin-top: 4px;
+  color: #b07f10;
+  font-family: 'Cairo', sans-serif;
+}
+.comparison-table .availability {
+  text-align: center;
+}
+.comparison-table .availability i {
+  color: #198754;
+}
+.comparison-table .availability span {
+  color: #cbd5e1;
+}
+.advice-section {
+  background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
+}
+.advice-card {
+  height: 100%;
+  padding: 26px;
+  border-radius:8px;
+  background: #ffffff;
+  border: 1px solid #e4ebf4;
+  box-shadow: 0 18px 38px rgba(13,27,62,0.08);
+}
+.advice-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.advice-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.82;
+}
+.faq-section {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+  padding-bottom: 88px;
+}
+.faq-card {
+  border: 1px solid #dfe4ec;
+  border-radius:8px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 18px 40px rgba(13,27,62,0.06);
+}
+.faq-card .accordion-button:not(.collapsed) {
+  background: #0d1b3e;
+  color: #ffffff;
+}
+.faq-card .accordion-button:focus {
+  box-shadow: none;
+}
+.js .reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.js .reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@keyframes pulseSoft {
+  0%, 100% { transform: translateY(0); box-shadow: 0 0 0 0 rgba(245,158,11,0.16); }
+  50% { transform: translateY(-1px); box-shadow: 0 0 0 10px rgba(245,158,11,0); }
+}
+.btn.btn-gold {
+  animation: pulseSoft 2.8s ease-in-out infinite;
+}
+@media (max-width: 991.98px) {
+  .pricing-page-section {
+    padding: 72px 0;
+  }
+}
+@media (max-width: 767.98px) {
+  .pricing-hero {
+    padding-top: 56px;
+  }
+  .pricing-pill-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .currency-pill-group,
+  .billing-pill-group {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .plan-card {
+    padding: 24px;
+  }
+  .plan-badge {
+    margin: -24px -24px 16px;
+    padding: 8px 24px;
+  }
+}
+</style>
+
+<div class="pricing-shell">
+  <section class="pricing-hero">
+    <div class="container">
+      <div class="pricing-hero-card">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7 pricing-hero-copy reveal-on-scroll">
+            <span class="pricing-kicker"><i class="fa-solid fa-coins"></i> Bilingual Pricing for Saudi Arabia and India</span>
+            <h1 class="pricing-hero-title">Choose a plan that fits your team today and scales with <span class="pricing-gradient-text">how you build tomorrow.</span></h1>
+            <p class="pricing-hero-lead">BanaaIQ launches in India first — native INR pricing, GST invoices auto-generated, hosted on AWS Mumbai. Saudi Arabia and GCC markets are fully supported and activate when you expand.</p>
+            <div class="pricing-pill-row">
+              <div class="currency-pill-group" aria-label="Currency switcher">
+                <button type="button" class="pill-button currency-pill" data-currency="SAR">🇸🇦 SAR</button>
+                <button type="button" class="pill-button currency-pill" data-currency="INR">🇮🇳 INR</button>
+                <button type="button" class="pill-button currency-pill" data-currency="USD">🌍 USD</button>
+              </div>
+              <div class="billing-pill-group" aria-label="Billing switcher">
+                <button type="button" class="pill-button billing-pill active" data-cycle="monthly">Monthly</button>
+                <button type="button" class="pill-button billing-pill" data-cycle="annual">Annual</button>
+              </div>
+            </div>
+            <p class="pricing-note">Prices shown in INR for India. Toggle to SAR for KSA/Gulf or USD for international reference. Native INR pricing — not converted.</p>
+          </div>
+          <div class="col-lg-5 pricing-hero-side reveal-on-scroll">
+            <div class="pricing-side-card mb-3">
+              <h3>Built for dual-market growth</h3>
+              <ul>
+                <li>Saudi teams usually grow into Professional for multilingual site control.</li>
+                <li>Indian firms often begin with Starter and expand as project complexity increases.</li>
+                <li>Enterprise stays flexible for regional, program, and leadership-scale rollouts.</li>
+              </ul>
+            </div>
+            <div class="pricing-side-card">
+              <h3>Currently free during beta</h3>
+              <p>No credit card is required today. The billing design is live so teams can understand the rollout path before regional payments are fully activated.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing-page-section pricing-grid">
+    <div class="container">
+      <div class="row g-4">
+        {% for plan in plans %}
+        {% set copy = plan_copy.get(plan.name, {}) %}
+        <div class="col-lg-4 reveal-on-scroll">
+          <div class="plan-card {% if plan.name == 'professional' %}popular{% endif %}">
+            {% if plan.name == 'professional' %}
+            <span class="plan-badge">Most Popular</span>
+            {% endif %}
+            <div class="plan-tag">{{ copy.tag }}</div>
+            <h2 class="plan-title">{{ plan.display_name }}</h2>
+            <span class="plan-arabic" lang="ar" dir="rtl">{{ copy.arabic }}</span>
+            <p class="plan-summary">{{ copy.summary }}</p>
+
+            <div class="price-box">
+              <div class="price-label">Selected Price</div>
+              {% if plan.name == 'enterprise' %}
+              <div class="price-stack">
+                <span class="price-currency">Custom</span>
+                <span class="price-value" data-custom="true">Contact</span>
+              </div>
+              <div class="price-meta">
+                <span class="price-cycle">Custom annual agreements</span>
+              </div>
+              {% else %}
+              <div class="price-stack">
+                <span class="price-currency" data-currency-label>{{ currency.code }}</span>
+                <span
+                  class="price-value"
+                  data-price
+                  data-sar-monthly="{{ plan.monthly_price|int }}"
+                  data-sar-annual="{{ plan.annual_price|int }}"
+                >{{ plan.monthly_price_display }}</span>
+              </div>
+              <div class="price-meta">
+                <span class="price-cycle" data-cycle-label>/month</span>
+                <span class="save-pill">Save {{ plan.save_percent }}%</span>
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="region-note">{{ copy.region }}</div>
+            <blockquote class="plan-quote">"{{ copy.quote }}"</blockquote>
+
+            <ul class="feature-list">
+              {% for row in comparison_rows[:6] %}
+              {% set included = plan.name == 'enterprise' or row.feature in plan.features %}
+              <li>
+                <i class="fa-solid {{ 'fa-check-circle feature-check' if included else 'fa-minus-circle feature-muted' }}"></i>
+                <span>{{ row.label if included else row.label ~ ' available on higher plans' }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+
+            {% if plan.name != 'enterprise' %}
+            <a href="{{ url_for('start_trial', plan_name=plan.name) }}" class="btn btn-gold w-100">Start {{ plan.display_name }} Trial</a>
+            {% else %}
+            <a href="{{ url_for('contact') }}" class="btn btn-outline-gold w-100">Contact Sales</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing-page-section">
+    <div class="container">
+      <div class="comparison-wrap reveal-on-scroll">
+        <div class="comparison-head">
+          <h2>Compare every plan at a glance</h2>
+          <p>Use the table below to see which workflows are included across Starter, Professional, and Enterprise.</p>
+        </div>
+        <div class="table-responsive">
+          <table class="table comparison-table align-middle">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                {% for plan in plans %}
+                {% set copy = plan_copy.get(plan.name, {}) %}
+                <th class="text-center">
+                  {{ plan.display_name }}
+                  <small class="d-block fw-normal" style="color:rgba(255,255,255,0.72);font-family:'Cairo',sans-serif;" dir="rtl">{{ copy.arabic }}</small>
+                </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in comparison_rows %}
+              <tr>
+                <td class="feature-name">
+                  {{ row.label }}
+                  <small dir="rtl">{{ row.arabic }}</small>
+                </td>
+                {% for plan in plans %}
+                {% set included = plan.name == 'enterprise' or row.feature in plan.features %}
+                <td class="availability">
+                  {% if included %}
+                  <i class="fa-solid fa-check-circle"></i>
+                  {% else %}
+                  <span><i class="fa-solid fa-minus"></i></span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing-page-section advice-section">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-6 reveal-on-scroll">
+          <div class="advice-card">
+            <h3>🇸🇦 For Saudi Arabia</h3>
+            <p>Most Saudi site teams start with Professional because it balances bilingual coordination, reporting visibility, inventory tracking, translator access, and AI workflows without needing an enterprise rollout from day one.</p>
+          </div>
+        </div>
+        <div class="col-lg-6 reveal-on-scroll">
+          <div class="advice-card">
+            <h3>🇮🇳 For India</h3>
+            <p>Most Indian construction firms start with Starter when the goal is to digitize reporting and task flow quickly, then move upward as teams expand into AI translation, inventory coordination, and wider delivery governance.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing-page-section faq-section">
+    <div class="container">
+      <div class="comparison-wrap faq-card reveal-on-scroll">
+        <div class="comparison-head">
+          <h2>Frequently Asked Questions</h2>
+          <p>Practical answers around trials, billing flow, switching currencies, and keeping project data secure.</p>
+        </div>
+        <div class="accordion accordion-flush" id="pricingFaq">
+          {% for item in faq_items %}
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}">
+                {{ item.question }}
+              </button>
+            </h2>
+            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#pricingFaq">
+              <div class="accordion-body">{{ item.answer }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || "";
+  const currencyButtons = document.querySelectorAll(".currency-pill");
+  const billingButtons = document.querySelectorAll(".billing-pill");
+  const priceNodes = document.querySelectorAll("[data-price]");
+  const currencyLabelNodes = document.querySelectorAll("[data-currency-label]");
+  const cycleLabelNodes = document.querySelectorAll("[data-cycle-label]");
+  const savePills = document.querySelectorAll(".save-pill");
+  const defaultCurrency = "{{ currency.code }}";
+  const currencyConfig = {
+    SAR: { label: "SAR", symbol: "SAR" },
+    INR: { label: "INR", symbol: "₹" },
+    USD: { label: "USD", symbol: "$" }
+  };
+
+  let activeCurrency = currencyConfig[defaultCurrency] ? defaultCurrency : "SAR";
+  let activeCycle = "monthly";
+
+  function formatAmount(amount, currency) {
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 0
+    }).format(amount);
+    return formatted;
+  }
+
+  function convertSarAmount(amount, currency) {
+    const sarValue = Number(amount || 0);
+    if (currency === "INR") {
+      return Math.round((sarValue * 22.27) / 10) * 10;
+    }
+    if (currency === "USD") {
+      return Math.round(sarValue * 0.27);
+    }
+    return Math.round(sarValue);
+  }
+
+  function syncCurrencyToSession(currencyCode) {
+    const formData = new FormData();
+    formData.append("csrf_token", csrfToken);
+    formData.append("currency", currencyCode);
+    formData.append("next", window.location.pathname);
+
+    fetch("{{ url_for('set_currency') }}", {
+      method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: formData,
+      credentials: "same-origin"
+    }).catch(() => {});
+  }
+
+  function renderPricing() {
+    currencyButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.currency === activeCurrency);
+    });
+    billingButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.cycle === activeCycle);
+    });
+
+    currencyLabelNodes.forEach((node) => {
+      node.textContent = currencyConfig[activeCurrency].label;
+    });
+
+    cycleLabelNodes.forEach((node) => {
+      node.textContent = activeCycle === "annual" ? "/year" : "/month";
+    });
+
+    savePills.forEach((node) => {
+      node.style.display = activeCycle === "annual" ? "inline-flex" : "none";
+    });
+
+    priceNodes.forEach((node) => {
+      const sarValue = activeCycle === "annual" ? node.dataset.sarAnnual : node.dataset.sarMonthly;
+      const converted = convertSarAmount(sarValue, activeCurrency);
+      node.textContent = formatAmount(converted, activeCurrency);
+    });
+  }
+
+  currencyButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeCurrency = button.dataset.currency;
+      renderPricing();
+      syncCurrencyToSession(activeCurrency);
+    });
+  });
+
+  billingButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeCycle = button.dataset.cycle;
+      renderPricing();
+    });
+  });
+
+  renderPricing();
+
+  const revealElements = document.querySelectorAll(".reveal-on-scroll");
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.18 });
+
+    revealElements.forEach((element) => {
+      observer.observe(element);
+    });
+  } else {
+    revealElements.forEach((element) => {
+      element.classList.add("is-visible");
+    });
+  }
+})();
+</script>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/reveal.js') }}"></script>
+{% endblock %}

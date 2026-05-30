@@ -1,0 +1,222 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% block page_title %}Stock Requests | Inventory | BanaaIQ{% endblock %}
+{% block dashboard_content %}
+<div class="container-fluid px-3 px-md-4 py-4">
+
+  {# Breadcrumb + header #}
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <a href="{{ url_for('inventory_index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Inventory Tracker
+    </a>
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#0B3C5D;">
+        <i class="fas fa-inbox me-2" style="color:#F59E0B;"></i>
+        Stock Requests
+        <small class="text-muted fs-6 ms-2">/ طلبات المخزون</small>
+      </h4>
+    </div>
+    {% if pending %}
+    <span class="badge bg-warning text-dark fs-6 ms-auto">{{ pending | length }} Pending</span>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {# Workspace-style tab bar #}
+  <div class="workspace-tabs mb-4" id="reqTabs">
+    <button class="workspace-tab active" data-bs-toggle="tab" data-bs-target="#tab-pending" type="button">
+      <i class="fas fa-clock me-1"></i> Pending
+      {% if pending %}<span class="badge bg-warning text-dark ms-1">{{ pending | length }}</span>{% endif %}
+    </button>
+    <button class="workspace-tab" data-bs-toggle="tab" data-bs-target="#tab-approved" type="button">
+      <i class="fas fa-check me-1"></i> Approved
+      {% if approved %}<span class="badge bg-success ms-1">{{ approved | length }}</span>{% endif %}
+    </button>
+    <button class="workspace-tab" data-bs-toggle="tab" data-bs-target="#tab-rejected" type="button">
+      <i class="fas fa-times me-1"></i> Rejected
+      {% if rejected %}<span class="badge bg-secondary ms-1">{{ rejected | length }}</span>{% endif %}
+    </button>
+  </div>
+
+  <div class="tab-content">
+
+    {# ── PENDING ── #}
+    <div class="tab-pane fade show active" id="tab-pending">
+      {% if pending %}
+        {% for req in pending %}
+        <div class="content-card mb-3">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div class="flex-fill">
+              <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <span class="fw-bold" style="color:#0B3C5D;font-size:15px;">
+                  {{ req.proposed_item_name or (req.inventory_item.name if req.inventory_item else 'Unknown Item') }}
+                </span>
+                {% if req.proposed_item_name_ar %}
+                  <span class="text-muted small" dir="rtl">{{ req.proposed_item_name_ar }}</span>
+                {% endif %}
+                {# Urgency badge #}
+                {% if req.urgency == 'critical' %}
+                  <span class="badge bg-danger">Critical</span>
+                {% elif req.urgency == 'urgent' %}
+                  <span class="badge bg-warning text-dark">Urgent</span>
+                {% endif %}
+              </div>
+              <div class="text-muted small d-flex flex-wrap gap-2 mb-2">
+                <span><i class="fas fa-folder fa-fw me-1"></i>{{ req.project.name }}</span>
+                <span><i class="fas fa-user fa-fw me-1"></i>{{ req.requested_by.full_name }}
+                  {% if req.requested_by.job_title %}
+                    <span class="text-muted">({{ req.requested_by.job_title }})</span>
+                  {% endif %}
+                </span>
+                <span><i class="fas fa-clock fa-fw me-1"></i>{{ req.created_at.strftime('%d %b %Y %H:%M') if req.created_at else '' }}</span>
+              </div>
+              {# Item spec context for PM decision #}
+              {% set ctx_item = req.inventory_item %}
+              {% if ctx_item and ctx_item.specification %}
+              <div class="small text-muted mb-1">
+                <i class="fas fa-microscope me-1" style="color:#F59E0B;"></i>
+                <strong>Spec:</strong> {{ ctx_item.specification[:200] }}
+              </div>
+              {% endif %}
+              {% if req.specification_requested %}
+              <div class="small text-muted mb-1">
+                <i class="fas fa-flask me-1" style="color:#F59E0B;"></i>
+                <strong>Requested spec:</strong> {{ req.specification_requested[:200] }}
+              </div>
+              {% endif %}
+              {% if req.preferred_brand %}
+              <div class="small text-muted mb-1">
+                <i class="fas fa-tag me-1" style="color:#F59E0B;"></i>
+                <strong>Preferred brand:</strong> {{ req.preferred_brand }}
+              </div>
+              {% endif %}
+              {% if req.description %}
+              <p class="small text-muted mb-0 mt-1">{{ req.description }}</p>
+              {% endif %}
+            </div>
+            <div class="text-end flex-shrink-0">
+              <div class="fw-bold" style="color:#0B3C5D;font-size:18px;">{{ '{:,.2f}'.format(req.requested_qty | float) }} {{ req.unit or '' }}</div>
+              <div class="text-muted" style="font-size:11px;">Requested Qty</div>
+            </div>
+          </div>
+
+          <div class="row g-2 mt-3">
+            <div class="col-lg-7">
+              <form method="POST" action="{{ url_for('inventory_request_approve', request_id=req.id) }}" class="d-flex gap-2 align-items-end flex-wrap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                  <label class="form-label form-label-sm mb-1 small fw-semibold">Approve Qty</label>
+                  <input type="number" name="approved_qty" value="{{ req.requested_qty | float }}"
+                         step="0.001" min="0" class="form-control form-control-sm" style="width:110px;">
+                </div>
+                <div class="flex-fill">
+                  <label class="form-label form-label-sm mb-1 small fw-semibold">Notes (optional)</label>
+                  <input type="text" name="review_notes" class="form-control form-control-sm" placeholder="Approval notes...">
+                </div>
+                <button type="submit" class="btn btn-sm btn-success fw-semibold">
+                  <i class="fas fa-check me-1"></i> Approve
+                </button>
+              </form>
+            </div>
+            <div class="col-lg-5">
+              <form method="POST" action="{{ url_for('inventory_request_reject', request_id=req.id) }}" class="d-flex gap-2 align-items-end flex-wrap">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-fill">
+                  <label class="form-label form-label-sm mb-1 small fw-semibold">Rejection reason</label>
+                  <input type="text" name="review_notes" class="form-control form-control-sm" placeholder="Reason...">
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-danger fw-semibold">
+                  <i class="fas fa-times me-1"></i> Reject
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-inbox fa-2x mb-3" style="color:#94a3b8;"></i>
+          <p class="mb-0" style="color:#94a3b8;">No pending stock requests / لا توجد طلبات معلقة</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── APPROVED ── #}
+    <div class="tab-pane fade" id="tab-approved">
+      {% if approved %}
+      <div class="table-responsive">
+        <table class="table table-hover small">
+          <thead style="background:#f8f9fa;">
+            <tr>
+              <th>Item</th><th>Project</th><th>Engineer</th>
+              <th>Requested</th><th>Approved</th>
+              <th>Reviewed By</th><th>Date</th><th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in approved %}
+            <tr>
+              <td class="fw-semibold">{{ req.proposed_item_name or (req.inventory_item.name if req.inventory_item else '—') }}</td>
+              <td>{{ req.project.name }}</td>
+              <td>{{ req.requested_by.full_name }}</td>
+              <td>{{ '{:,.2f}'.format(req.requested_qty | float) }} {{ req.unit or '' }}</td>
+              <td class="text-success fw-bold">{{ '{:,.2f}'.format(req.approved_qty | float) if req.approved_qty else '—' }}</td>
+              <td>{{ req.reviewed_by.full_name if req.reviewed_by else '—' }}</td>
+              <td class="text-muted">{{ req.reviewed_at.strftime('%d %b %Y') if req.reviewed_at else '' }}</td>
+              <td class="text-muted">{{ req.review_notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-inbox fa-2x mb-3" style="color:#94a3b8;"></i>
+          <p class="mb-0" style="color:#94a3b8;">No approved requests yet / لا توجد طلبات موافق عليها</p>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── REJECTED ── #}
+    <div class="tab-pane fade" id="tab-rejected">
+      {% if rejected %}
+      <div class="table-responsive">
+        <table class="table table-hover small">
+          <thead style="background:#f8f9fa;">
+            <tr>
+              <th>Item</th><th>Project</th><th>Engineer</th>
+              <th>Requested</th><th>Reviewed By</th><th>Date</th><th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in rejected %}
+            <tr>
+              <td class="fw-semibold">{{ req.proposed_item_name or (req.inventory_item.name if req.inventory_item else '—') }}</td>
+              <td>{{ req.project.name }}</td>
+              <td>{{ req.requested_by.full_name }}</td>
+              <td>{{ '{:,.2f}'.format(req.requested_qty | float) }} {{ req.unit or '' }}</td>
+              <td>{{ req.reviewed_by.full_name if req.reviewed_by else '—' }}</td>
+              <td class="text-muted">{{ req.reviewed_at.strftime('%d %b %Y') if req.reviewed_at else '' }}</td>
+              <td class="text-muted">{{ req.review_notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-inbox fa-2x mb-3" style="color:#94a3b8;"></i>
+          <p class="mb-0" style="color:#94a3b8;">No rejected requests / لا توجد طلبات مرفوضة</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
