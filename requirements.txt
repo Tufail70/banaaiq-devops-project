@@ -61,3 +61,4 @@ urllib3==2.6.3
 werkzeug>=3.0.0
 WTForms==3.2.1
 xlrd==2.0.2
+gunicorn==21.2.0
