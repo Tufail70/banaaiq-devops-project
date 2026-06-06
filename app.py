@@ -853,10 +853,14 @@ def _check_migration_state():
 def initialize_database():
     with app.app_context():
         try:
+            inspector = inspect(db.engine)
+            if not inspector.has_table("users"):
+                app.logger.info("[DB] Fresh database detected. Creating initial schema...")
+                db.create_all()
+                import os
+                os.system("flask db stamp head")
+            
             # Schema is managed exclusively by Alembic migrations.
-            # db.create_all() is intentionally removed — it was silently
-            # creating tables that bypassed migration tracking, masking
-            # missing ALTER TABLE statements until a new column broke queries.
             # Run `flask db upgrade` before starting the server.
             _check_migration_state()
             ensure_users_phone_column()
