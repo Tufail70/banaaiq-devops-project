@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8000
 
 # 7. Start Gunicorn (4 workers listening on port 8000)
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:8000", "app:app"]
