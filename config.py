@@ -75,7 +75,7 @@ class Config:
     # ── Cookie security ──────────────────────────────────────────────────────
     # Secure=True means cookies are only sent over HTTPS.
     # In development (HTTP) set FLASK_ENV=development to allow HTTP.
-    SESSION_COOKIE_SECURE = _flask_env != "development"
+    SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_SECURE = _flask_env != "development"

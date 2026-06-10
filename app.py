@@ -234,7 +234,14 @@ app.logger.debug(
     "SQLALCHEMY_DATABASE_URI resolved to %s",
     mask_database_url(app.config["SQLALCHEMY_DATABASE_URI"]),
 )
-client = OpenAI(api_key=app.config["OPENAI_API_KEY"]) if app.config["OPENAI_API_KEY"] else None
+client = (
+    OpenAI(
+        api_key=app.config["OPENAI_API_KEY"],
+        base_url="https://openrouter.ai/api/v1",
+    )
+    if app.config["OPENAI_API_KEY"]
+    else None
+)
 mail = Mail(app)
 csrf = CSRFProtect(app)
 limiter = Limiter(
@@ -14871,6 +14878,7 @@ Keep the total response under 300 words."""
 @app.route("/api/dpr/transcribe-voice", methods=["POST"])
 @limiter.limit("10 per minute")
 @login_required
+
 def dpr_transcribe_voice():
     import os
     import tempfile
@@ -14878,11 +14886,18 @@ def dpr_transcribe_voice():
     forbidden = ensure_ai_access("dpr")
     if forbidden:
         return forbidden
+
     if not app.config.get("OPENAI_API_KEY"):
-        return jsonify({"error": "AI service is not configured. Please set OPENAI_API_KEY.", "success": False}), 503
+        return jsonify({
+            "error": "AI service is not configured. Please set OPENAI_API_KEY.",
+            "success": False
+        }), 503
 
     if "audio" not in request.files:
-        return jsonify({"error": "No audio file", "success": False})
+        return jsonify({
+            "error": "No audio file",
+            "success": False
+        })
 
     audio_file = request.files["audio"]
     field = sanitize_input(request.form.get("field", "general"), 50)
@@ -14890,16 +14905,24 @@ def dpr_transcribe_voice():
     audio_file.seek(0, 2)
     size = audio_file.tell()
     audio_file.seek(0)
+
     if size > 25 * 1024 * 1024:
-        return jsonify({"error": "Audio file too large. Max 25MB.", "success": False})
+        return jsonify({
+            "error": "Audio file too large. Max 25MB.",
+            "success": False
+        })
 
     tmp_path = None
+
     try:
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
             audio_file.save(tmp.name)
             tmp_path = tmp.name
 
-        whisper_client = OpenAI(api_key=app.config["OPENAI_API_KEY"])
+        whisper_client = OpenAI(
+            api_key=app.config["OPENAI_API_KEY"]
+        )
+
         with open(tmp_path, "rb") as audio_stream:
             transcript = whisper_client.audio.transcriptions.create(
                 model="whisper-1",
@@ -14908,21 +14931,31 @@ def dpr_transcribe_voice():
             )
 
         record_ai_usage("dpr")
+
         response_payload = {
             "success": True,
             "text": transcript.text,
             "language": getattr(transcript, "language", ""),
             "field": field,
         }
-        response_payload.update(build_ai_response_meta(current_user))
+
+        response_payload.update(
+            build_ai_response_meta(current_user)
+        )
+
         return jsonify(response_payload)
+
     except Exception as e:
         app.logger.error(f"Voice transcription error: {str(e)}")
-        return jsonify({"error": f"Transcription failed: {str(e)}", "success": False})
+
+        return jsonify({
+            "error": f"Transcription failed: {str(e)}",
+            "success": False
+        })
+
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
-
 
 @app.route("/api/dpr/import-workers", methods=["POST"])
 @login_required
