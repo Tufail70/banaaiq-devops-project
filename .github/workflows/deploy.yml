@@ -23,8 +23,6 @@ jobs:
 
             git pull origin main
 
-            sudo docker compose build web
-
-            sudo docker compose up -d web
+            sudo docker compose up -d --build
 
             sudo docker compose exec -T web flask db upgrade
